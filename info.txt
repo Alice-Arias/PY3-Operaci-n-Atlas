@@ -1,0 +1,21 @@
+Nombre del curso: Lenguajes de Programación
+
+Semestre y año lectivo: I Semestre 2026
+
+Nombre del los estudiante: 
+
+			Alice Arias Salazar
+			Heldys Aguero Espinosa
+			Yeremi Calvo Porras
+
+Número de carnet: 
+		  2023104639
+		  
+
+Número de proyecto: Proyecto #3 Operación Atlas
+
+Fecha de entrega: 01/06/2026
+
+Estatus de la entrega: 
+
+Link del repo: https://github.com/Alice-Arias/PY3-Operaci-n-Atlas.git
