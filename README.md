@@ -15,222 +15,166 @@ Sistema desarrollado en **Prolog** para simular una aventura espacial donde el j
 
 ---
 
+<div align="center">
+
 # Integrantes
 
 | Nombre |
 |---|
-| **Alice Arias Salazar** |
-| **Heldys Aguero Espinosa** |
-| **Yeremi Calvo Porras** |
+| Alice Arias Salazar |
+| Heldys Aguero Espinosa |
+| Yeremi Calvo Porras |
+
+</div>
 
 ---
+
+<div align="center">
 
 # Información académica
 
 | Campo | Información |
 |---|---|
-| **Curso** | Lenguajes de Programación |
-| **Grupo** | GR 60 |
-| **Semestre** | I Semestre, 2026 |
-| **Proyecto** | Proyecto Programado #3 |
-| **Fecha de entrega** | 01/06/2026 |
-| **Estado** | En desarrollo |
+| Curso | Lenguajes de Programación |
+| Grupo | GR 60 |
+| Semestre | I Semestre, 2026 |
+| Proyecto | Proyecto Programado #3 |
+| Fecha de entrega | 01/06/2026 |
+| Estado | En desarrollo |
+
+</div>
 
 ---
+
+<div align="center">
 
 # Descripción
 
-**Operación Atlas** es un juego de aventura espacial desarrollado completamente en **Prolog**, donde el jugador asume el papel del ingeniero principal de la estación orbital **Aurora**.
+Operación Atlas es un juego de aventura espacial desarrollado completamente en Prolog.
 
-Luego de una tormenta solar, varios módulos quedaron aislados y múltiples sistemas críticos dejaron de funcionar. El jugador deberá:
-
-- Reparar sistemas
-- Resolver restricciones lógicas
-- Recolectar artefactos
-- Desbloquear módulos
-- Rescatar tripulantes
-- Restaurar la estación espacial
-
-El proyecto aplica conceptos fundamentales del paradigma lógico como:
-
-- Hechos
-- Reglas
-- Inferencia lógica
-- Backtracking
-- Recursividad
-- Estados dinámicos
-- Consultas declarativas
+El jugador deberá recorrer la estación Aurora, reparar sistemas, recolectar artefactos y rescatar tripulantes.
 
 ---
 
+</div>
+
 # Objetivo del juego
 
-El objetivo principal es restaurar completamente la estación espacial cumpliendo condiciones lógicas específicas.
-
-## Objetivos principales
-
-- Restaurar sistemas críticos
-- Reparar energía y comunicaciones
-- Rescatar tripulantes atrapados
-- Acceder a módulos restringidos
-- Cumplir todas las condiciones de victoria
+- Restaurar sistemas críticos  
+- Reparar energía y comunicaciones  
+- Rescatar tripulantes  
+- Acceder a módulos restringidos  
+- Cumplir condiciones de victoria  
 
 ---
 
 # Funcionalidades
 
 ## Navegación
-
-- Movimiento entre módulos conectados
-- Validación de rutas disponibles
-- Restricciones de acceso
+- Movimiento entre módulos
+- Validación de rutas
+- Backtracking
 - Registro de módulos visitados
-- Búsqueda de rutas mediante backtracking
-
----
 
 ## Gestión de artefactos
-
-- Recolección de artefactos
-- Inventario dinámico
-- Uso de objetos especiales
+- Recolección
+- Inventario
+- Uso de objetos
 - Desbloqueo de módulos
 
----
-
-## Sistemas reparables
-
-- Reparación de sistemas críticos
+## Sistemas
+- Reparación
 - Validación de requisitos
-- Cambio dinámico de estados
-- Dependencias entre sistemas
+- Dependencias
+
+## Rescate
+- Tripulantes atrapados
+- Condiciones de rescate
+
+## Consultas
+- Inventario
+- Ubicación de objetos
+- Estado del juego
 
 ---
 
-## Rescate de tripulación
-
-- Rescate de tripulantes atrapados
-- Verificación de condiciones necesarias
-- Actualización dinámica de estados
-
----
-
-## Sistema de consultas
-
-- Consulta de inventario
-- Consulta de ubicación de artefactos
-- Consulta de módulos visitados
-- Verificación de objetivos pendientes
-- Verificación de condiciones de victoria
-
----
+<div align="center">
 
 # Predicados principales
 
 | Predicado | Función |
 |---|---|
-| `tomar/1` | Permite recoger artefactos |
-| `usar/1` | Permite usar artefactos |
-| `mover/1` | Permite desplazarse entre módulos |
-| `puedo_ir/1` | Valida si un movimiento es válido |
-| `reparar/1` | Restaura sistemas dañados |
-| `rescatar/1` | Rescata tripulantes |
-| `ruta/3` | Encuentra rutas entre módulos |
-| `que_tengo/0` | Muestra inventario |
-| `modulos_visitados/0` | Muestra historial recorrido |
-| `verifica_gane/0` | Verifica condiciones de victoria |
-| `como_gano/0` | Sugiere cómo completar el juego |
-
----
-
-# Características técnicas
-
-<div align="center">
-
-| Característica | Estado |
-|---|---|
-| Uso de hechos y reglas | 
-| Base dinámica (`assert/retract`) | 
-| Backtracking | 
-| Recursividad | 
-| Predicados dinámicos | 
-| Interacción por consola | 
-| Modelo declarativo |
+| tomar/1 | Recoger artefactos |
+| usar/1 | Usar artefactos |
+| mover/1 | Moverse entre módulos |
+| puedo_ir/1 | Validar movimiento |
+| reparar/1 | Reparar sistemas |
+| rescatar/1 | Rescatar tripulantes |
+| ruta/3 | Encontrar caminos |
+| que_tengo/0 | Inventario |
+| modulos_visitados/0 | Historial |
+| verifica_gane/0 | Verificar victoria |
+| como_gano/0 | Sugerencia |
 
 </div>
 
 ---
 
-# Interfaz gráfica (en desarrollo)
+# Características técnicas
 
-El sistema contará con una interfaz gráfica que permitirá:
-
-- Visualizar módulos
-- Mostrar inventario
-- Facilitar interacción del usuario
-- Ejecutar acciones mediante botones
-- Mostrar estados del juego
-- Integrar Prolog con una interfaz visual
-
-*(Tecnología aún por definir)*
+- Hechos y reglas en Prolog  
+- Backtracking  
+- Recursividad  
+- Base dinámica (`assert/retract`)  
+- Predicados dinámicos  
+- Interacción por consola  
 
 ---
 
-# Estructura general del proyecto
+# Interfaz gráfica (en desarrollo)
+
+- Visualización de módulos  
+- Inventario del jugador  
+- Acciones mediante botones  
+- Estados del sistema  
+- Integración con Prolog  
+
+---
+
+# Estructura del proyecto
 
 ```text
 PP3/
-│
 ├── documentacion/
 │   └── Documentacion.pdf
-│
 ├── programa/
-│   ├── 
-│   ├── 
-│   └── 
-│
+│   ├── ...
 └── info.txt
 ```
 
-
-# Ejecución
-
-## Requisitos
-
-- SWI-Prolog instalado
-- Consola compatible con Prolog
-
 ---
 
-## Ejecutar el proyecto
+# Ejecución
 
 ```bash
 swipl
 ```
 
----
-
-## Cargar el archivo principal
+```prolog
+['.pl'].
+```
 
 ```prolog
-[' .pl'].
+.
 ```
 
 ---
-
-## Iniciar el juego
-
-```prolog
- .
-```
-
-
-
-# Licencia
 
 <div align="center">
 
-Proyecto desarrollado únicamente con fines académicos para el curso de **Lenguajes de Programación** del **Instituto Tecnológico de Costa Rica**.
+# Licencia
+
+Proyecto desarrollado únicamente con fines académicos para el curso de Lenguajes de Programación del Instituto Tecnológico de Costa Rica.
 
 Operación Atlas © 2026
 
