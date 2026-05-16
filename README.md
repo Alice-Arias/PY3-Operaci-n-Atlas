@@ -147,8 +147,9 @@ El jugador deberá recorrer la estación Aurora, reparar sistemas, recolectar ar
 PP3/
 ├── documentacion/
 │   └── Documentacion.pdf
+│
 ├── programa/
-│   ├── ...
+│   ├──
 └── info.txt
 ```
 
@@ -160,13 +161,6 @@ PP3/
 swipl
 ```
 
-```prolog
-['.pl'].
-```
-
-```prolog
-.
-```
 
 ---
 
