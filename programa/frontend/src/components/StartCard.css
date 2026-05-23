@@ -86,17 +86,24 @@
         0 0 20px rgba(255, 255, 255, 0.08);
 }
 
+.input-warning {
+    width: 100%;
+    margin-top: -0.5rem;
+    font-size: 0.68rem;
+    letter-spacing: 0.22rem;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.38);
+    text-align: center;
+}
+
 /* =========================
    BUTTON
 ========================= */
 
 .start-button {
     width: 100%;
-
     padding: 1rem;
-
     border: none;
-
     border-radius: 14px;
 
     background:
@@ -107,15 +114,10 @@
         );
 
     color: rgba(255, 255, 255, 0.9);
-
     font-size: 0.9rem;
-
     letter-spacing: 0.35rem;
-
     text-transform: uppercase;
-
     cursor: pointer;
-
     transition:
         transform 0.2s ease,
         background 0.25s ease,
@@ -130,7 +132,6 @@
 
 .start-button:hover {
     transform: translateY(-2px);
-
     background:
         linear-gradient(
             145deg,
@@ -144,4 +145,85 @@
 
 .start-button:active {
     transform: scale(0.98);
+}
+
+.start-button:disabled {
+    cursor: not-allowed;
+    transform: none;
+    opacity: 0.35;
+    box-shadow: none;
+}
+
+.start-button:disabled:hover {
+    transform: none;
+    background: linear-gradient(
+        145deg,
+        rgba(255,255,255,0.12),
+        rgba(255,255,255,0.05)
+    );
+    box-shadow: none;
+}
+
+.load-button {
+    width: 100%;
+    padding: 1rem;
+    border: none;
+    border-radius: 14px;
+    background:
+        linear-gradient(
+            145deg,
+            rgba(255,255,255,0.12),
+            rgba(255,255,255,0.05)
+        );
+
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.9rem;
+    letter-spacing: 0.35rem;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition:
+        transform 0.2s ease,
+        background 0.25s ease,
+        box-shadow 0.25s ease;
+
+    border:
+        1px solid rgba(255,255,255,0.08);
+
+    box-shadow:
+        0 0 18px rgba(255,255,255,0.03);
+}
+
+.load-button:hover {
+    transform: translateY(-2px);
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(255,255,255,0.18),
+            rgba(255,255,255,0.08)
+        );
+
+    box-shadow:
+        0 0 24px rgba(255,255,255,0.08);
+}
+
+.load-button:active {
+    transform: scale(0.98);
+}
+
+.load-button:disabled {
+    cursor: not-allowed;
+    transform: none;
+    opacity: 0.35;
+    box-shadow: none;
+}
+
+.load-button:disabled:hover {
+    transform: none;
+    background: linear-gradient(
+        145deg,
+        rgba(255,255,255,0.12),
+        rgba(255,255,255,0.05)
+    );
+    box-shadow: none;
 }
