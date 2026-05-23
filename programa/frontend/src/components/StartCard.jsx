@@ -1,8 +1,10 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom';
 import './StartCard.css'
 
 function StartCard() {
     const [nombre, setNombre] = useState('');
+    const navigate = useNavigate();
 
     const minLargoNombre = nombre.length < 3;
 
@@ -27,7 +29,7 @@ function StartCard() {
         <button
           className="start-button"
           disabled={minLargoNombre}
-          onClick={() => alert("Sin implementar aun")}
+          onClick={() => navigate("/game")}
         >
           Start New Operation
         </button>

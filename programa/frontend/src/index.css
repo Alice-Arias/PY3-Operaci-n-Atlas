@@ -1,6 +1,6 @@
 :root {
   --text: #6b6375;
-  --text-h: #08060d;
+  --text-h: #ffffff;
   --bg: #fff;
   --border: #e5e4e7;
   --code-bg: #f4f3ec;
@@ -75,8 +75,7 @@ body::after {
 }
 
 #root {
-  width: 1126px;
-  max-width: 100%;
+  width: 100%;
   margin: 0 auto;
   text-align: center;
   min-height: 100svh;
