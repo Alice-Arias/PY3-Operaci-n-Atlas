@@ -1,10 +1,11 @@
+import Header from '../components/Header';
 import './Game.css'
 
 function Game() {
     return(
         <div className='game'>
             <div className='top'>
-                <h2>Header aquí</h2>
+                <Header />
             </div>
             <div className='mid'>
                 <h1>Pantalla de juego aquí</h1>    
