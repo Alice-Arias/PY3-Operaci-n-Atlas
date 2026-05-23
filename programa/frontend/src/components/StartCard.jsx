@@ -29,7 +29,7 @@ function StartCard() {
         <button
           className="start-button"
           disabled={minLargoNombre}
-          onClick={() => navigate("/game")}
+          onClick={() => navigate("/game", { state: { nombre } })}
         >
           Start New Operation
         </button>
