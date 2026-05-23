@@ -12,7 +12,7 @@ const PROLOG_FILE = "../backend/juego.pl";
 
 
 // =========================================================
-// FUNCIÓN BASE (PROLOG ↔ NODE)
+// FUNCIÓN BASE PARA EJECUTAR CONSULTAS PROLOG
 // =========================================================
 
 function ejecutarProlog(query, res) {
