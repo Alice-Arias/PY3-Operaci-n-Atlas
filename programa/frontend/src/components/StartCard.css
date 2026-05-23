@@ -1,0 +1,147 @@
+.start-card {
+    width: 380px;
+
+    display: flex;
+    flex-direction: column;
+
+    gap: 1.4rem;
+
+    padding: 2.2rem;
+
+    border-radius: 24px;
+
+    background:transparent;
+
+    position: relative;
+
+    overflow: hidden;
+}
+
+/* Línea superior futurista */
+.start-card::before {
+    content: '';
+
+    position: absolute;
+
+    top: 0;
+    left: 50%;
+
+    transform: translateX(-50%);
+
+    width: 80%;
+    height: 1px;
+
+    background:transparent;
+}
+
+/* =========================
+   INPUT
+========================= */
+
+.name-input {
+    width: 100%;
+
+    padding: 1rem 1.2rem;
+
+    border-radius: 14px;
+
+    border:
+        1px solid rgba(255, 255, 255, 0.08);
+
+    background:
+        rgba(0, 0, 0, 0.28);
+
+    color: rgba(255, 255, 255, 0.9);
+
+    font-size: 0.95rem;
+
+    letter-spacing: 0.18rem;
+
+    outline: none;
+
+    transition:
+        border 0.25s ease,
+        box-shadow 0.25s ease,
+        background 0.25s ease;
+
+    box-sizing: border-box;
+}
+
+.name-input::placeholder {
+    color: rgba(255, 255, 255, 0.28);
+
+    text-transform: uppercase;
+
+    letter-spacing: 0.25rem;
+}
+
+.name-input:focus {
+    border:
+        1px solid rgba(255, 255, 255, 0.22);
+
+    background:
+        rgba(0, 0, 0, 0.38);
+
+    box-shadow:
+        0 0 20px rgba(255, 255, 255, 0.08);
+}
+
+/* =========================
+   BUTTON
+========================= */
+
+.start-button {
+    width: 100%;
+
+    padding: 1rem;
+
+    border: none;
+
+    border-radius: 14px;
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(255,255,255,0.12),
+            rgba(255,255,255,0.05)
+        );
+
+    color: rgba(255, 255, 255, 0.9);
+
+    font-size: 0.9rem;
+
+    letter-spacing: 0.35rem;
+
+    text-transform: uppercase;
+
+    cursor: pointer;
+
+    transition:
+        transform 0.2s ease,
+        background 0.25s ease,
+        box-shadow 0.25s ease;
+
+    border:
+        1px solid rgba(255,255,255,0.08);
+
+    box-shadow:
+        0 0 18px rgba(255,255,255,0.03);
+}
+
+.start-button:hover {
+    transform: translateY(-2px);
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(255,255,255,0.18),
+            rgba(255,255,255,0.08)
+        );
+
+    box-shadow:
+        0 0 24px rgba(255,255,255,0.08);
+}
+
+.start-button:active {
+    transform: scale(0.98);
+}

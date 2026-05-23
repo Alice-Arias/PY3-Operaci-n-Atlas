@@ -1,0 +1,215 @@
+.home {
+    min-height: 100vh;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+
+    gap: 2rem;
+}
+
+.title {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    gap: 0.5rem;
+
+    user-select: none;
+}
+
+.title h1 {
+    margin: 0;
+
+    font-size: 7rem;
+    font-weight: 200;
+    left: 3.5%;
+
+    letter-spacing: 1.2rem;
+
+    color: rgba(255, 255, 255, 0.92);
+
+    text-transform: uppercase;
+
+    text-shadow:
+        0 0 10px rgba(255, 255, 255, 0.15),
+        0 0 30px rgba(255, 255, 255, 0.08),
+        0 0 60px rgba(255, 255, 255, 0.04);
+
+    position: relative;
+}
+
+.title h1::after {
+    content: '';
+
+    position: absolute;
+
+    left: 50%;
+    bottom: -12px;
+
+    transform: translateX(-50%);
+
+    width: 70%;
+    height: 1px;
+
+    background:
+        linear-gradient(
+            to right,
+            transparent,
+            rgba(255, 255, 255, 0.8),
+            transparent
+        );
+
+    box-shadow:
+        0 0 10px rgba(255, 255, 255, 0.35);
+}
+
+.title p {
+    margin: 0;
+
+    font-size: 0.85rem;
+    letter-spacing: 0.46rem;
+    color: rgba(255, 255, 255, 0.42);
+    font-weight: 300;
+    text-transform: uppercase;
+
+    animation: faultyFlicker 6s infinite;
+}
+
+@keyframes faultyFlicker {
+
+    0% {
+        opacity: 1;
+        text-shadow:
+            0 0 4px rgba(255,255,255,0.15);
+    }
+
+    4% {
+        opacity: 0.3;
+    }
+
+    6% {
+        opacity: 1;
+    }
+
+    7% {
+        opacity: 0.1;
+        transform: translateX(-1px);
+    }
+
+    9% {
+        opacity: 0.9;
+    }
+
+    12% {
+        opacity: 0.4;
+    }
+
+    14% {
+        opacity: 1;
+    }
+
+    28% {
+        opacity: 1;
+    }
+
+    30% {
+        opacity: 0.2;
+        transform: translateX(1px);
+    }
+
+    31% {
+        opacity: 0.8;
+    }
+
+    32% {
+        opacity: 0.15;
+    }
+
+    34% {
+        opacity: 1;
+    }
+
+    55% {
+        opacity: 1;
+    }
+
+    57% {
+        opacity: 0.35;
+    }
+
+    58% {
+        opacity: 0.95;
+    }
+
+    72% {
+        opacity: 1;
+    }
+
+    73% {
+        opacity: 0.05;
+    }
+
+    74% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
+.options-card {
+    width: 380px;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+
+    gap: 1.4rem;
+    padding: 2.2rem;
+    border-radius: 24px;
+    background:
+        linear-gradient(
+            145deg,
+            rgba(255, 255, 255, 0.028),
+            rgba(255, 255, 255, 0.012)
+        );
+    backdrop-filter: blur(10px);
+    border:
+        1px solid rgba(255, 255, 255, 0.06);
+    box-shadow:
+        0 0 40px rgba(0, 0, 0, 0.35),
+        inset 0 0 20px rgba(255, 255, 255, 0.015);
+
+    position: relative;
+
+    overflow: hidden;
+}
+
+.options-card::before {
+    content: '';
+
+    position: absolute;
+
+    top: 0;
+    left: 50%;
+
+    transform: translateX(-50%);
+
+    width: 80%;
+    height: 1px;
+
+    background:
+        linear-gradient(
+            to right,
+            transparent,
+            rgba(255, 255, 255, 0.55),
+            transparent
+        );
+
+    box-shadow:
+        0 0 10px rgba(255, 255, 255, 0.12);
+}
