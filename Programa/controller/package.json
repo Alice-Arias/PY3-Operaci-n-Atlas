@@ -1,0 +1,13 @@
+{
+  "name": "prolog-traductor",
+  "version": "0.1.0",
+  "description": "Servidor para traducir comandos a Prolog",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "body-parser": "^1.20.1"
+  }
+}
