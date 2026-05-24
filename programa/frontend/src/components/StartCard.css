@@ -1,37 +1,44 @@
 .start-card {
     width: 380px;
-
     display: flex;
     flex-direction: column;
-
     gap: 1.4rem;
-
-    padding: 2.2rem;
+    padding: 2.4rem;
 
     border-radius: 24px;
-
-    background:transparent;
-
     position: relative;
-
     overflow: hidden;
+
+    /* Fondo tipo vidrio más real */
+    background: rgba(10, 10, 20, 0.55);
+    backdrop-filter: blur(14px);
+
+    border: 1px solid rgba(255, 255, 255, 0.08);
+
+    /* sombra más profunda */
+    box-shadow:
+        0 10px 40px rgba(0, 0, 0, 0.6),
+        inset 0 0 20px rgba(255, 255, 255, 0.03);
 }
 
-/* Línea superior futurista */
+/* Glow superior más sci-fi */
 .start-card::before {
     content: '';
-
     position: absolute;
-
     top: 0;
     left: 50%;
-
     transform: translateX(-50%);
+    width: 85%;
+    height: 2px;
 
-    width: 80%;
-    height: 1px;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.25),
+        transparent
+    );
 
-    background:transparent;
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.15);
 }
 
 /* =========================
@@ -40,190 +47,127 @@
 
 .name-input {
     width: 100%;
-
     padding: 1rem 1.2rem;
 
     border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
 
-    border:
-        1px solid rgba(255, 255, 255, 0.08);
-
-    background:
-        rgba(0, 0, 0, 0.28);
-
-    color: rgba(255, 255, 255, 0.9);
+    background: rgba(0, 0, 0, 0.35);
+    color: rgba(255, 255, 255, 0.95);
 
     font-size: 0.95rem;
-
-    letter-spacing: 0.18rem;
+    letter-spacing: 0.15rem;
 
     outline: none;
-
-    transition:
-        border 0.25s ease,
-        box-shadow 0.25s ease,
-        background 0.25s ease;
+    transition: all 0.25s ease;
 
     box-sizing: border-box;
 }
 
 .name-input::placeholder {
-    color: rgba(255, 255, 255, 0.28);
-
+    color: rgba(255, 255, 255, 0.25);
     text-transform: uppercase;
-
-    letter-spacing: 0.25rem;
+    letter-spacing: 0.2rem;
 }
 
 .name-input:focus {
-    border:
-        1px solid rgba(255, 255, 255, 0.22);
-
-    background:
-        rgba(0, 0, 0, 0.38);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    background: rgba(0, 0, 0, 0.5);
 
     box-shadow:
-        0 0 20px rgba(255, 255, 255, 0.08);
+        0 0 18px rgba(255, 255, 255, 0.12),
+        0 0 40px rgba(0, 150, 255, 0.08);
+    transform: scale(1.01);
 }
 
 .input-warning {
     width: 100%;
     margin-top: -0.5rem;
-    font-size: 0.68rem;
-    letter-spacing: 0.22rem;
+
+    font-size: 0.7rem;
+    letter-spacing: 0.2rem;
     text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.38);
+
+    color: #ff6b6b;
     text-align: center;
+
+    animation: pulseWarning 1.2s infinite;
+}
+
+@keyframes pulseWarning {
+    0% { opacity: 0.4; }
+    50% { opacity: 1; }
+    100% { opacity: 0.4; }
 }
 
 /* =========================
-   BUTTON
+   BUTTONS
 ========================= */
 
-.start-button {
-    width: 100%;
-    padding: 1rem;
-    border: none;
-    border-radius: 14px;
-
-    background:
-        linear-gradient(
-            145deg,
-            rgba(255,255,255,0.12),
-            rgba(255,255,255,0.05)
-        );
-
-    color: rgba(255, 255, 255, 0.9);
-    font-size: 0.9rem;
-    letter-spacing: 0.35rem;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition:
-        transform 0.2s ease,
-        background 0.25s ease,
-        box-shadow 0.25s ease;
-
-    border:
-        1px solid rgba(255,255,255,0.08);
-
-    box-shadow:
-        0 0 18px rgba(255,255,255,0.03);
-}
-
-.start-button:hover {
-    transform: translateY(-2px);
-    background:
-        linear-gradient(
-            145deg,
-            rgba(255,255,255,0.18),
-            rgba(255,255,255,0.08)
-        );
-
-    box-shadow:
-        0 0 24px rgba(255,255,255,0.08);
-}
-
-.start-button:active {
-    transform: scale(0.98);
-}
-
-.start-button:disabled {
-    cursor: not-allowed;
-    transform: none;
-    opacity: 0.35;
-    box-shadow: none;
-}
-
-.start-button:disabled:hover {
-    transform: none;
-    background: linear-gradient(
-        145deg,
-        rgba(255,255,255,0.12),
-        rgba(255,255,255,0.05)
-    );
-    box-shadow: none;
-}
-
+.start-button,
 .load-button {
     width: 100%;
     padding: 1rem;
-    border: none;
-    border-radius: 14px;
-    background:
-        linear-gradient(
-            145deg,
-            rgba(255,255,255,0.12),
-            rgba(255,255,255,0.05)
-        );
 
-    color: rgba(255, 255, 255, 0.9);
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+
     font-size: 0.9rem;
     letter-spacing: 0.35rem;
     text-transform: uppercase;
+
     cursor: pointer;
-    transition:
-        transform 0.2s ease,
-        background 0.25s ease,
-        box-shadow 0.25s ease;
+    transition: all 0.25s ease;
 
-    border:
-        1px solid rgba(255,255,255,0.08);
+    color: white;
 
-    box-shadow:
-        0 0 18px rgba(255,255,255,0.03);
-}
-
-.load-button:hover {
-    transform: translateY(-2px);
-
-    background:
-        linear-gradient(
-            145deg,
-            rgba(255,255,255,0.18),
-            rgba(255,255,255,0.08)
-        );
-
-    box-shadow:
-        0 0 24px rgba(255,255,255,0.08);
-}
-
-.load-button:active {
-    transform: scale(0.98);
-}
-
-.load-button:disabled {
-    cursor: not-allowed;
-    transform: none;
-    opacity: 0.35;
-    box-shadow: none;
-}
-
-.load-button:disabled:hover {
-    transform: none;
     background: linear-gradient(
         145deg,
-        rgba(255,255,255,0.12),
-        rgba(255,255,255,0.05)
+        rgba(255, 255, 255, 0.12),
+        rgba(255, 255, 255, 0.04)
     );
+
+    box-shadow:
+        0 6px 18px rgba(0, 0, 0, 0.4),
+        inset 0 0 10px rgba(255, 255, 255, 0.03);
+}
+
+/* hover común */
+.start-button:hover,
+.load-button:hover {
+    transform: translateY(-3px);
+    box-shadow:
+        0 10px 25px rgba(0, 0, 0, 0.5),
+        0 0 18px rgba(255, 255, 255, 0.08);
+}
+
+/* click */
+.start-button:active,
+.load-button:active {
+    transform: scale(0.97);
+}
+
+/* disabled */
+.start-button:disabled,
+.load-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.35;
+    transform: none;
     box-shadow: none;
+}
+
+/* efecto especial para botón activo */
+.start-button:not(:disabled) {
+    border: 1px solid rgba(0, 255, 150, 0.25);
+    box-shadow:
+        0 0 18px rgba(0, 255, 150, 0.1),
+        inset 0 0 12px rgba(0, 255, 150, 0.05);
+}
+
+.start-button:not(:disabled):hover {
+    background: linear-gradient(
+        145deg,
+        rgba(0, 255, 150, 0.18),
+        rgba(255, 255, 255, 0.05)
+    );
 }

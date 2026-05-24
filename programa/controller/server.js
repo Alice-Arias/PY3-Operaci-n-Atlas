@@ -1,106 +1,101 @@
-const express = require("express");
-const cors = require("cors");
-const bodyParser = require("body-parser");
-const { exec } = require("child_process");
+const express = require('express');
+const bodyParser = require('body-parser');
+const { correrProlog, leerLista } = require('./ejecutor_prolog');
 
+// Servidor para hablar con Prolog
 const app = express();
-
-app.use(cors());
 app.use(bodyParser.json());
 
-const PROLOG_FILE = "../backend/juego.pl";
+// Esto deja que el navegador pueda hacer peticiones mientras probamos localmente.
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+    res.header('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+
+    if (req.method === 'OPTIONS') 
+        return res.sendStatus(200);
+    
+    next();
+});
 
 
-// =========================================================
-// FUNCIÓN BASE PARA EJECUTAR CONSULTAS PROLOG
-// =========================================================
-
-function ejecutarProlog(query, res) {
-
-    const command = `swipl -s ${PROLOG_FILE} -g "${query}" -t halt`;
-
-    exec(command, (error, stdout, stderr) => {
-
-        if (error) {
-            return res.json({
-                ok: false,
-                error: stderr || error.message
-            });
-        }
-
-        return res.json({
-            ok: true,
-            data: stdout.trim()
-        });
-    });
+// Manda una respuesta normal en JSON.
+function enviarBien(res, datos) {
+    res.json(datos);
 }
 
 
-// =========================================================
-// MOVIMIENTO
-// =========================================================
+// Manda un error en JSON.
+function enviarError(res, mensaje) {
+    res.status(500).json({ error: mensaje });
+}
 
-app.post("/mover", (req, res) => {
-    const { destino } = req.body;
+// Si Prolog manda una lista, la pasamos a lista de JS.
+function convertirSalida(texto) {
+    return leerLista(texto) || texto;
+}
 
-    ejecutarProlog(`mover(${destino})`, res);
+// Se usa cuando queremos devolver una lista.
+function ejecutarLista(meta, res) {
+    const salida = correrProlog(meta);
+
+    if (!salida.ok) 
+        return enviarError(res, salida.err);
+
+    enviarBien(res, { raw: salida.out, list: convertirSalida(salida.out) });
+}
+
+// Se usa cuando solo queremos devolver texto.
+function ejecutarTexto(meta, res) {
+    const salida = correrProlog(meta);
+
+    if (!salida.ok) 
+        return enviarError(res, salida.err);
+
+    enviarBien(res, { out: salida.out });
+}
+
+// Modulos
+app.get('/api/modulos', (req, res) => {
+    ejecutarLista("listar_modulos_ui(Ms), format('~q', [Ms])", res);
 });
 
-
-// =========================================================
-// TOMAR ARTEFACTO
-// =========================================================
-
-app.post("/tomar", (req, res) => {
-    const { artefacto } = req.body;
-
-    ejecutarProlog(`tomar(${artefacto})`, res);
+// Artefactos
+app.get('/api/artefactos', (req, res) => {
+    ejecutarLista("listar_artefactos_ui(As), format('~q', [As])", res);
 });
 
-
-// =========================================================
-// INVENTARIO
-// =========================================================
-
-app.get("/inventario", (req, res) => {
-    ejecutarProlog("que_tengo", res);
+// Iniciar partida
+app.post('/api/iniciar', (req, res) => {
+    const nombreJugador = req.body && req.body.nombre ? req.body.nombre : 'anonimo';
+    const meta = `iniciar_partida_ui('${nombreJugador}')`;
+    ejecutarTexto(meta, res);
 });
 
-
-// =========================================================
-// DONDE ESTA ARTEFACTO
-// =========================================================
-
-app.get("/donde/:artefacto", (req, res) => {
-    ejecutarProlog(`donde_esta(${req.params.artefacto})`, res);
+// Tomar artefacto
+app.post('/api/tomar', (req, res) => {
+    const artefacto = req.body && req.body.artefacto ? req.body.artefacto : null;
+    if (!artefacto) 
+        return res.status(400).json({ error: 'artefacto missing' });
+    const meta = `tomar_artefacto_ui(${artefacto})`;
+    ejecutarTexto(meta, res);
 });
 
-
-// =========================================================
-// RUTA ENTRE MÓDULOS
-// =========================================================
-
-app.get("/ruta/:inicio/:fin", (req, res) => {
-    ejecutarProlog(
-        `ruta(${req.params.inicio},${req.params.fin},Camino)`,
-        res
-    );
+// Guardar partida
+app.post('/api/guardar', (req, res) => {
+    ejecutarTexto('guardar_partida_ui', res);
 });
 
+// Id actual
+app.get('/api/partida_actual', (req, res) => {
+    const salida = correrProlog('partida_actual_ui(Id), format("~w", [Id])');
 
-// =========================================================
-// VERIFICAR VICTORIA
-// =========================================================
-
-app.get("/ganar", (req, res) => {
-    ejecutarProlog("verifica_gane", res);
+    if (!salida.ok) 
+        return enviarError(res, salida.err);
+    enviarBien(res, { id: salida.out });
 });
 
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Se esta ejecutando en el puerto ${PORT}`));
 
-// =========================================================
-// INICIAR SERVIDOR
-// =========================================================
-
-app.listen(3001, () => {
-    console.log(" Controller corriendo en http://localhost:3001");
-});
+module.exports = app;

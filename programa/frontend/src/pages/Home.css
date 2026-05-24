@@ -17,149 +17,191 @@
     gap: 0.5rem;
 
     user-select: none;
+
+    position: relative; /* 🔥 clave para centrar el p */
 }
 
+/* =========================
+   TÍTULO PRINCIPAL
+========================= */
 .title h1 {
     margin: 0;
 
-    font-size: 7rem;
-    font-weight: 200;
-    left: 3.5%;
+    font-size: clamp(4rem, 10vw, 8rem);
+    font-weight: 300;
 
-    letter-spacing: 1.2rem;
-
-    color: rgba(255, 255, 255, 0.92);
-
+    letter-spacing: 0.5rem;
     text-transform: uppercase;
 
-    text-shadow:
-        0 0 10px rgba(255, 255, 255, 0.15),
-        0 0 30px rgba(255, 255, 255, 0.08),
-        0 0 60px rgba(255, 255, 255, 0.04);
+    color: #ffffff;
 
     position: relative;
+    text-align: center;
+
+    z-index: 1;
+
+    text-shadow:
+        0 0 6px rgba(255, 255, 255, 0.15),
+        0 0 18px rgba(0, 180, 255, 0.2),
+        0 0 40px rgba(0, 120, 255, 0.15),
+        0 0 90px rgba(0, 0, 0, 0.6);
+
+    animation: atlasGlow 3.5s ease-in-out infinite;
 }
 
+/* glow dinámico */
+@keyframes atlasGlow {
+    0%, 100% {
+        transform: scale(1);
+        text-shadow:
+            0 0 8px rgba(255, 255, 255, 0.2),
+            0 0 20px rgba(0, 180, 255, 0.15),
+            0 0 50px rgba(0, 120, 255, 0.08);
+    }
+
+    50% {
+        transform: scale(1.02);
+        text-shadow:
+            0 0 15px rgba(255, 255, 255, 0.35),
+            0 0 45px rgba(0, 200, 255, 0.25),
+            0 0 90px rgba(0, 120, 255, 0.15);
+    }
+}
+
+/* =========================
+   TEXTO ROJO DETRÁS
+========================= */
+.title h1::before {
+    content: attr(data-text);
+
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+
+    font-size: inherit;
+    font-weight: inherit;
+    letter-spacing: inherit;
+
+    color: rgba(255, 0, 0, 0.28);
+
+    z-index: 0;
+
+    text-shadow:
+        0 0 25px rgba(255, 0, 0, 0.7),
+        0 0 60px rgba(255, 0, 0, 0.4);
+
+    filter: blur(1px);
+
+    animation: redPulse 2.8s ease-in-out infinite;
+
+    mix-blend-mode: screen;
+}
+
+@keyframes redPulse {
+    0%, 100% {
+        opacity: 0.35;
+        transform: translate(-50%, -50%) scale(1);
+    }
+
+    50% {
+        opacity: 0.7;
+        transform: translate(-50%, -50%) scale(1.05);
+    }
+}
+
+/* =========================
+   LÍNEA ROJA
+========================= */
 .title h1::after {
     content: '';
 
     position: absolute;
-
     left: 50%;
-    bottom: -12px;
-
+    bottom: -14px;
     transform: translateX(-50%);
 
-    width: 70%;
-    height: 1px;
+    width: 60%;
+    height: 2px;
 
-    background:
-        linear-gradient(
-            to right,
-            transparent,
-            rgba(255, 255, 255, 0.8),
-            transparent
-        );
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 0, 0, 0.6),
+        transparent
+    );
 
     box-shadow:
-        0 0 10px rgba(255, 255, 255, 0.35);
+        0 0 12px rgba(255, 0, 0, 0.25);
 }
 
+/* =========================
+   SUBTÍTULO (AHORA CENTRADO EN EL H1)
+========================= */
 .title p {
+    position: absolute;
+
+    top: 50%;
+    left: 50%;
+
+    transform: translate(-50%, -50%);
+
     margin: 0;
 
-    font-size: 0.85rem;
-    letter-spacing: 0.46rem;
-    color: rgba(255, 255, 255, 0.42);
-    font-weight: 300;
+    font-size: 0.95rem;
+    font-weight: 800; /* 🔥 NEGRITA REAL */
+
+    letter-spacing: 0.25rem; /* 👈 menos para que no se rompa la línea */
+
+    white-space: nowrap; /* 🔥 UNA SOLA LÍNEA */
+
+    color: rgb(134, 45, 45);
+
     text-transform: uppercase;
 
-    animation: faultyFlicker 6s infinite;
+    z-index: 2;
+
+    pointer-events: none;
+
+    animation: faultyFlicker 2.8s infinite;
+
+    text-shadow:
+        0 0 10px rgba(255, 0, 0, 0.7),
+        0 0 25px rgba(255, 0, 0, 0.4);
 }
 
+/* flicker */
 @keyframes faultyFlicker {
 
-    0% {
-        opacity: 1;
-        text-shadow:
-            0 0 4px rgba(255,255,255,0.15);
-    }
+    0% { opacity: 1; }
 
-    4% {
-        opacity: 0.3;
-    }
+    4% { opacity: 0.3; }
+    6% { opacity: 1; }
 
-    6% {
-        opacity: 1;
-    }
+    7% { opacity: 0.1; }
+    9% { opacity: 0.9; }
 
-    7% {
-        opacity: 0.1;
-        transform: translateX(-1px);
-    }
+    12% { opacity: 0.4; }
+    14% { opacity: 1; }
 
-    9% {
-        opacity: 0.9;
-    }
+    30% { opacity: 0.2; }
+    31% { opacity: 0.8; }
 
-    12% {
-        opacity: 0.4;
-    }
+    32% { opacity: 0.15; }
+    34% { opacity: 1; }
 
-    14% {
-        opacity: 1;
-    }
+    57% { opacity: 0.35; }
+    58% { opacity: 0.95; }
 
-    28% {
-        opacity: 1;
-    }
+    73% { opacity: 0.05; }
+    74% { opacity: 1; }
 
-    30% {
-        opacity: 0.2;
-        transform: translateX(1px);
-    }
-
-    31% {
-        opacity: 0.8;
-    }
-
-    32% {
-        opacity: 0.15;
-    }
-
-    34% {
-        opacity: 1;
-    }
-
-    55% {
-        opacity: 1;
-    }
-
-    57% {
-        opacity: 0.35;
-    }
-
-    58% {
-        opacity: 0.95;
-    }
-
-    72% {
-        opacity: 1;
-    }
-
-    73% {
-        opacity: 0.05;
-    }
-
-    74% {
-        opacity: 1;
-    }
-
-    100% {
-        opacity: 1;
-    }
+    100% { opacity: 1; }
 }
 
+/* =========================
+   CARD
+========================= */
 .options-card {
     width: 380px;
 
@@ -171,21 +213,22 @@
     gap: 1.4rem;
     padding: 2.2rem;
     border-radius: 24px;
-    background:
-        linear-gradient(
-            145deg,
-            rgba(255, 255, 255, 0.028),
-            rgba(255, 255, 255, 0.012)
-        );
+
+    background: linear-gradient(
+        145deg,
+        rgba(255, 255, 255, 0.028),
+        rgba(255, 255, 255, 0.012)
+    );
+
     backdrop-filter: blur(10px);
-    border:
-        1px solid rgba(255, 255, 255, 0.06);
+
+    border: 1px solid rgba(255, 255, 255, 0.06);
+
     box-shadow:
         0 0 40px rgba(0, 0, 0, 0.35),
         inset 0 0 20px rgba(255, 255, 255, 0.015);
 
     position: relative;
-
     overflow: hidden;
 }
 
@@ -193,23 +236,19 @@
     content: '';
 
     position: absolute;
-
     top: 0;
     left: 50%;
-
     transform: translateX(-50%);
 
     width: 80%;
     height: 1px;
 
-    background:
-        linear-gradient(
-            to right,
-            transparent,
-            rgba(255, 255, 255, 0.55),
-            transparent
-        );
+    background: linear-gradient(
+        to right,
+        transparent,
+        rgba(255, 255, 255, 0.55),
+        transparent
+    );
 
-    box-shadow:
-        0 0 10px rgba(255, 255, 255, 0.12);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.12);
 }
