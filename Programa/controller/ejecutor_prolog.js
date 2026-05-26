@@ -1,114 +1,146 @@
 const { execSync } = require("child_process");
 const path = require("path");
+const os = require("os");
 
 const SWIPL = "swipl";
 
-// Ruta principal del proyecto Prolog
+//Ruta principal del proyecto Prolog
 const MAIN = path.join(__dirname, "..", "main.pl");
 
-// Traductor/interfaz Prolog
+//Traductor/interfaz Prolog
 const TRADUCTOR = path.join(__dirname, "traductor.pl");
+
+//persistencia de estado
+const PERSISTENCIA = path.join(__dirname, "estado_persistente.pl");
+
+// Archivo donde se guarda el estado dinamico entre llamadas
+// Se guarda en la carpeta del proyecto (junto a main.pl)
+const ESTADO_ARCHIVO = path.join(__dirname, "..", "estado_actual.pl");
 
 // Carpeta raíz del proyecto
 const ROOT_DIR = path.join(__dirname, "..");
 
+// -----------------------------------------------------------------------------
+// CONVERSION DE RUTAS
+// -----------------------------------------------------------------------------
 function convertirRuta(ruta) {
-    return ruta.replace(/\\/g, "\\\\");
+    if (os.platform() === 'win32') {
+        // En Windows: reemplazar \ por / (Prolog acepta slash en Windows tambien)
+        return ruta.replace(/\\/g, '/');
+    }
+    return ruta;
 }
-
+// -----------------------------------------------------------------------------
+// ARMAR META COMPLETA
+// -----------------------------------------------------------------------------
 function armarMetaCompleta(meta) {
+    const mainRuta        = convertirRuta(MAIN);
+    const persistenciaRuta = convertirRuta(PERSISTENCIA);
+    const traductorRuta   = convertirRuta(TRADUCTOR);
+    const estadoRuta      = convertirRuta(ESTADO_ARCHIVO);
+    const partes = [
+        // Pasar la ruta del archivo de estado como variable de entorno
+        // para que estado_persistente.pl sepa donde leer/escribir
+        `setenv('ATLAS_STATE_FILE', '${estadoRuta}')`,
+        `consult('${mainRuta}')`,
+        `consult('${persistenciaRuta}')`,
+        `consult('${traductorRuta}')`,
+    ];
 
-    const cargarArchivos =
-        `consult('${convertirRuta(MAIN)}'), ` +
-        `consult('${convertirRuta(TRADUCTOR)}'), `;
+    if (meta && meta.trim() !== '') {
+        partes.push(meta.trim());
+    }
 
-    return cargarArchivos + meta + ", halt.";
+    partes.push('halt');
+
+    return partes.join(', ');
 }
-
-// Corre el comando de Prolog y devuelve la salida o el error.
+// -----------------------------------------------------------------------------
+// EJECUTAR COMANDO SWIPL
+// -----------------------------------------------------------------------------
 function ejecutarComando(metaCompleta) {
-
+    // Usa una lista de argumentos en lugar de string para que no haya problemas de caracteres
     const comando = `${SWIPL} -q -g "${metaCompleta}"`;
-
     try {
-
         const salida = execSync(comando, {
             encoding: "utf8",
             stdio: ["ignore", "pipe", "pipe"],
-            cwd: ROOT_DIR
+            cwd: ROOT_DIR,
+            timeout: 15000
         });
-
         return {
             ok: true,
             out: salida.trim()
         };
-
     } catch (error) {
-
+        const mensajeError = (error.stderr || error.stdout || error.message || '').toString().trim();
+        if (!mensajeError && error.status !== 0) {
+            return {
+                ok: false,
+                err: "La accion no pudo completarse. Verifica que cumples los requisitos."
+            };
+        }
         return {
             ok: false,
-            err: (error.stderr || error.message).toString()
+            err: mensajeError
         };
     }
 }
-
-// Recibe una meta Prolog en texto y la ejecuta.
+// -----------------------------------------------------------------------------
+// API
+// -----------------------------------------------------------------------------
 function correrProlog(meta) {
-
     const metaCompleta = armarMetaCompleta(meta);
-
     return ejecutarComando(metaCompleta);
 }
 
-// Revisa si el texto parece una lista Prolog como [a,b,c].
 function esListaProlog(cadena) {
-
-    if (!cadena)
-        return false;
-
+    if (!cadena) return false;
     const textoLista = cadena.trim();
-
     return textoLista.startsWith("[") && textoLista.endsWith("]");
 }
 
-// Quita comillas al principio y al final si existen.
 function limpiarElemento(texto) {
-
-    if (texto.startsWith("'") && texto.endsWith("'"))
-        return texto.slice(1, -1);
-
-    if (texto.startsWith('"') && texto.endsWith('"'))
-        return texto.slice(1, -1);
-
-    return texto;
+    if (!texto || typeof texto !== 'string') return texto;
+    const t = texto.trim();
+    if ((t.startsWith("'") && t.endsWith("'")) ||
+        (t.startsWith('"') && t.endsWith('"'))) {
+        return t.slice(1, -1);
+    }
+    return t;
 }
 
-// Divide una lista Prolog simple en partes.
 function separarElementos(textoLista) {
+    const elementos = [];
+    let acumulado = '';
+    let profundidad = 0;
 
-    return textoLista
-        .split(/,(?=(?:[^']*'[^']*')*[^']*$)/)
-        .map((textoParte) => textoParte.trim());
+    for (let i = 0; i < textoLista.length; i++) {
+        const c = textoLista[i];
+        if (c === '[' || c === '(') profundidad++;
+        if (c === ']' || c === ')') profundidad--;
+        if (c === ',' && profundidad === 0) {
+            elementos.push(acumulado.trim());
+            acumulado = '';
+            continue;
+        }
+        acumulado += c;
+    }
+
+    if (acumulado.trim() !== '') elementos.push(acumulado.trim());
+    return elementos;
 }
 
-// Convierte una lista Prolog como [a,b,c] en un array de JS.
 function leerLista(cadena) {
-
-    if (!esListaProlog(cadena))
-        return null;
+    if (!esListaProlog(cadena)) return null;
 
     const textoLista = cadena.trim();
-
     const textoInterno = textoLista.slice(1, -1).trim();
 
-    if (textoInterno === "")
-        return [];
+    if (textoInterno === "") return [];
 
     const partes = separarElementos(textoInterno);
-
-    return partes.map((elementoLista) =>
-        limpiarElemento(elementoLista)
-    );
+    return partes.map(limpiarElemento);
 }
 
 module.exports = {

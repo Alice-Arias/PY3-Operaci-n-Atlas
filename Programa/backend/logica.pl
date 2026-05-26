@@ -121,6 +121,13 @@ mover(Modulo) :- puedo_ir(Modulo),
     marcar_visitado(Modulo),
     format("Te moviste a ~w.~n", [Modulo]).
 
+% marcar_visitado/1
+% Descripcion: registra que el jugador visito un modulo.
+% Entrada: nombre del modulo.
+% Salida: agrega el modulo a la lista de visitados.
+% Restricciones: ninguna.
+marcar_visitado(Modulo) :- assertz(visitado(Modulo)).
+
 % Reparacion y rescate
 
 % reparar/1

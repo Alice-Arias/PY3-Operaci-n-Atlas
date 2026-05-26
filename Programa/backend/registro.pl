@@ -1,5 +1,5 @@
-% Este modulo maneja el registro de partidas por jugador.
-% Descripcion: crea IDs, busca partidas pendientes y reanuda guardados.
+% maneja registro de partidas de jugadores.
+% Descripcion: crea ids, buscar partidas pendientes, reanuda guardados.
 % Entrada: nombre del jugador o id de partida.
 % Salida: registro persistente y archivos por partida.
 % Restricciones: usa la carpeta `partidas guardadas`.
@@ -73,15 +73,31 @@ avisar_partidas_pendientes(NombreJugador) :-
 % Salida: crea estado inicial, id y registro.
 % Restricciones: si ya hay partidas pendientes, avisa primero.
 iniciar_partida(NombreJugador) :-
-    partidas_pendientes(NombreJugador, Pendientes),
-    ( Pendientes \= []
-    -> format("Tienes estas partidas sin finalizar: ~w~n", [Pendientes]),writeln("Deseas terminarlas? Usa cargar_partida_id/1 para continuar una de ellas.")
-    ; estado_inicial, generar_id_partida(IdPartida),
-        assertz(jugador_nombre(NombreJugador)),
-        assertz(partida_actual(IdPartida)),
-        partida_archivo(NombreJugador, IdPartida, Archivo),
-        registrar_partida(NombreJugador, IdPartida, Archivo, pendiente),
-        format("Partida iniciada para ~w con id ~w.~n", [NombreJugador, IdPartida]) ).
+    estado_inicial,
+
+    retractall(jugador_nombre(_)),
+    retractall(partida_actual(_)),
+
+    generar_id_partida(IdPartida),
+
+    assertz(jugador_nombre(NombreJugador)),
+    assertz(partida_actual(IdPartida)),
+
+    partida_archivo(NombreJugador, IdPartida, Archivo),
+
+    registrar_partida(
+        NombreJugador,
+        IdPartida,
+        Archivo,
+        pendiente
+    ),
+
+    guardar_partida,
+
+    format(
+        "Partida iniciada para ~w con id ~w.~n",
+        [NombreJugador, IdPartida]
+    ).
 
 % cargar_partida_id/1
 % Descripcion: abre una partida usando su id.
