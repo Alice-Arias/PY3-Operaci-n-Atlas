@@ -92,6 +92,13 @@ export function parsearConexionesProlog(texto) {
         .filter((conexion) => conexion.origen && conexion.destino);
 }
 
+export function parsearModulosInfo(texto) {
+    if (!texto || typeof texto !== 'string') return [];
+
+    return parsearTerminos(texto, 'modulo_data', ['modulo', 'descripcion'])
+        .filter((item) => item.modulo);
+}
+
 export function parsearRegistroProlog(texto) {
     if (!texto || typeof texto !== 'string') return [];
 

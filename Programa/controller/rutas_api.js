@@ -17,6 +17,10 @@ router.get('/modulos', (req, res) => {
     ejecutarConsultaLista("listar_modulos_ui(Ms), format('~q', [Ms])", res);
 });
 
+router.get('/modulos_info', (req, res) => {
+    ejecutarConsultaLista("listar_modulos_info_ui(Ms), format('~q', [Ms])", res);
+});
+
 router.get('/artefactos', (req, res) => {
     ejecutarConsultaLista("listar_artefactos_ui(As), format('~q', [As])", res);
 });

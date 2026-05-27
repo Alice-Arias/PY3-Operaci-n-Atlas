@@ -28,6 +28,17 @@ listar_modulos_ui(Modulos) :-
         modulo(Modulo, _),
         Modulos
     ).
+
+% -----------------------------------------------------------------------------
+% LISTAR MODULOS CON DESCRIPCION
+% -----------------------------------------------------------------------------
+listar_modulos_info_ui(ModulosInfo) :-
+    findall(
+        modulo_data(Modulo, Descripcion),
+        modulo(Modulo, Descripcion),
+        ModulosInfoSinOrden
+    ),
+    sort(ModulosInfoSinOrden, ModulosInfo).
 % -----------------------------------------------------------------------------
 % LISTAR ARTEFACTOS
 % (son estaticos)

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import atlasBackground from '../../assets/Fondo2.png';
 
 // Iconos para representar los modulos
 const MODULE_META = {
@@ -16,8 +17,58 @@ const MODULE_META = {
     invernadero:           { icon: '🌿', label: 'Invernadero' },
 };
 
+const MODULE_KEYWORDS = [
+    { words: ['puente', 'mando', 'control'], icon: '🖥️' },
+    { words: ['laboratorio', 'lab', 'investigacion'], icon: '🔬' },
+    { words: ['energia', 'reactor', 'power'], icon: '⚡' },
+    { words: ['enfermeria', 'medico', 'medica', 'salud'], icon: '🏥' },
+    { words: ['escape', 'hangar', 'nave', 'lanzamiento'], icon: '🚀' },
+    { words: ['seguridad', 'camara', 'vigilancia'], icon: '📷' },
+    { words: ['comunicacion', 'comms', 'radio', 'antena'], icon: '📡' },
+    { words: ['almacen', 'deposito', 'carga'], icon: '📦' },
+    { words: ['habitacion', 'dormitorio', 'cuarto'], icon: '🛏️' },
+    { words: ['invernadero', 'jardin', 'planta', 'bio'], icon: '🌿' },
+    { words: ['modulo', 'sector', 'nucleo'], icon: '🧩' },
+];
+
+const MODULE_FALLBACK_EMOJIS = ['🛰️', '🧭', '🧪', '🧰', '⚙️', '🔷', '🛡️', '🗺️'];
+
+function normalizarClave(valor) {
+    if (!valor) return '';
+    return valor
+        .toString()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim();
+}
+
+function hashTexto(texto) {
+    let hash = 0;
+    for (let i = 0; i < texto.length; i += 1) {
+        hash = (hash * 31 + texto.charCodeAt(i)) >>> 0;
+    }
+    return hash;
+}
+
+function getModuloIcon(nombre) {
+    const clave = normalizarClave(nombre);
+    if (!clave) return '🔷';
+
+    if (MODULE_META[clave]?.icon) return MODULE_META[clave].icon;
+
+    const regla = MODULE_KEYWORDS.find(({ words }) => words.some((w) => clave.includes(w)));
+    if (regla) return regla.icon;
+
+    return MODULE_FALLBACK_EMOJIS[hashTexto(clave) % MODULE_FALLBACK_EMOJIS.length];
+}
+
 function getMeta(nombre) {
-    return MODULE_META[nombre] || { icon: '🔷', label: nombre };
+    const base = MODULE_META[nombre] || {};
+    return {
+        icon: base.icon || getModuloIcon(nombre),
+        label: base.label || formatNombre(nombre),
+    };
 }
 
 function formatNombre(nombre) {
@@ -67,6 +118,41 @@ function construirConexionesDeRespaldo(moduloActual, conectados) {
     return conectados.map((destino) => ({ origen: moduloActual, destino }));
 }
 
+function buscarRutasAlternativas(origen, destino, conexiones, limite = 3) {
+    if (!origen || !destino) return [];
+    if (origen === destino) return [[origen]];
+
+    const grafo = construirGrafoBidireccional(conexiones);
+    const rutas = [];
+
+    const dfs = (actual, camino, visitados) => {
+        if (rutas.length >= limite) return;
+        if (actual === destino) {
+            rutas.push([...camino]);
+            return;
+        }
+
+        const vecinos = Array.from(grafo.get(actual) || []);
+        vecinos.sort((a, b) => a.localeCompare(b));
+
+        for (const vecino of vecinos) {
+            if (visitados.has(vecino)) continue;
+            visitados.add(vecino);
+            camino.push(vecino);
+            dfs(vecino, camino, visitados);
+            camino.pop();
+            visitados.delete(vecino);
+            if (rutas.length >= limite) return;
+        }
+    };
+
+    dfs(origen, [origen], new Set([origen]));
+
+    return rutas
+        .sort((a, b) => a.length - b.length || a.join('>').localeCompare(b.join('>')))
+        .slice(0, limite);
+}
+
 function crearSetAristasDesdeRuta(ruta) {
     const setAristas = new Set();
     for (let i = 0; i < ruta.length - 1; i += 1) {
@@ -78,7 +164,7 @@ function crearSetAristasDesdeRuta(ruta) {
     return setAristas;
 }
 
-function MapaVisual({ modulos, conexiones, estado }) {
+function MapaVisual({ modulos, conexiones, estado, descripcionesModulos = {} }) {
     const listaModulos = useMemo(() => (Array.isArray(modulos) ? modulos : []), [modulos]);
     const listaConexiones = useMemo(() => (Array.isArray(conexiones) ? conexiones : []), [conexiones]);
     const conectados   = useMemo(() => (Array.isArray(estado?.modulosConectados) ? estado.modulosConectados : []), [estado]);
@@ -124,14 +210,18 @@ function MapaVisual({ modulos, conexiones, estado }) {
         return construirConexionesDeRespaldo(moduloActual, conectados);
     }, [listaConexiones, moduloActual, conectados]);
 
-    const rutaSugerida = useMemo(() => {
+    const rutasSugeridas = useMemo(() => {
         if (!moduloSeleccionado || !moduloActual) return [];
-        return buscarRutaMasCorta(moduloActual, moduloSeleccionado, conexionesParaGrafo);
+        return buscarRutasAlternativas(moduloActual, moduloSeleccionado, conexionesParaGrafo, 3);
     }, [moduloActual, moduloSeleccionado, conexionesParaGrafo]);
 
+    const rutaSugerida = rutasSugeridas[0] || [];
     const aristasRuta = useMemo(() => crearSetAristasDesdeRuta(rutaSugerida), [rutaSugerida]);
 
     const destinoEsDirecto = moduloSeleccionado && conectados.includes(moduloSeleccionado);
+    const descripcionModuloSeleccionado = moduloSeleccionado
+        ? (descripcionesModulos[moduloSeleccionado] || 'Sin descripcion disponible para este modulo.')
+        : '';
 
     const layoutGrafo = useMemo(() => {
         const total = listaModulos.length;
@@ -197,6 +287,13 @@ function MapaVisual({ modulos, conexiones, estado }) {
             <div className="mapa-grid">
                 {listaModulos.length > 0 && (
                     <div className="mapa-grafo" aria-label="Grafo de conexiones entre modulos">
+                        <img
+                            className="mapa-grafo-fondo"
+                            src={atlasBackground}
+                            alt=""
+                            aria-hidden="true"
+                        />
+                        <div className="mapa-grafo-overlay" aria-hidden="true" />
                         <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="mapa-grafo-svg">
                             {layoutGrafo.lineas.map((linea) => (
                                 (() => {
@@ -248,22 +345,29 @@ function MapaVisual({ modulos, conexiones, estado }) {
 
                 {moduloSeleccionado && (
                     <div className="mapa-ruta-info">
-                        <span>
-                            Destino: <strong>{formatNombre(moduloSeleccionado)}</strong>
-                        </span>
+                        <div className="mapa-ruta-row">
+                            <span className="ruta-etiqueta ruta-destino">Destino</span>
+                            <strong className="ruta-valor ruta-valor-destino">{formatNombre(moduloSeleccionado)}</strong>
+                        </div>
+                        <div className="ruta-descripcion">
+                            <span className="ruta-etiqueta ruta-info">Descripción</span>
+                            <span className="ruta-texto-descripcion">{descripcionModuloSeleccionado}</span>
+                        </div>
                         {moduloSeleccionado === moduloActual && (
-                            <span>Ya estás en este módulo.</span>
+                            <span className="ruta-nota ruta-nota-cyan">Ya estás en este módulo.</span>
                         )}
-                        {moduloSeleccionado !== moduloActual && destinoEsDirecto && (
-                            <span className="ruta-posible">
-                                Ruta disponible ahora: {rutaSugerida.length > 0 ? rutaSugerida.map(formatNombre).join(' -> ') : `${formatNombre(moduloActual)} -> ${formatNombre(moduloSeleccionado)}`}
-                            </span>
+                        {moduloSeleccionado !== moduloActual && rutasSugeridas.length > 0 && (
+                            <div className="ruta-lista">
+                                {rutasSugeridas.map((ruta, indice) => (
+                                    <div key={`${ruta.join('|')}-${indice}`} className="ruta-opcion">
+                                        <span className="ruta-etiqueta ruta-sugerida-label">Ruta {indice + 1}</span>
+                                        <span className="ruta-camino ruta-camino-sugerida">{ruta.map(formatNombre).join(' -> ')}</span>
+                                    </div>
+                                ))}
+                            </div>
                         )}
-                        {moduloSeleccionado !== moduloActual && !destinoEsDirecto && rutaSugerida.length > 0 && (
-                            <span className="ruta-sugerida">Ruta sugerida: {rutaSugerida.map(formatNombre).join(' -> ')}</span>
-                        )}
-                        {moduloSeleccionado !== moduloActual && rutaSugerida.length === 0 && conexionesParaGrafo.length > 0 && !destinoEsDirecto && (
-                            <span className="ruta-sugerida">Ese módulo no tiene acceso directo desde tu posición actual.</span>
+                        {moduloSeleccionado !== moduloActual && rutasSugeridas.length === 0 && conexionesParaGrafo.length > 0 && !destinoEsDirecto && (
+                            <span className="ruta-nota ruta-nota-roja">Ese módulo no tiene acceso directo desde tu posición actual.</span>
                         )}
                     </div>
                 )}

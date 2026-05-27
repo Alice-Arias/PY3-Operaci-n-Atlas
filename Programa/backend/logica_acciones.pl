@@ -56,12 +56,14 @@ requisitos_faltantes_rescate([Requisito | Resto], Faltantes) :-
 mostrar_requisitos_faltantes([]) :- writeln("No cumples con los requisitos necesarios para rescatar a ese tripulante.").
 mostrar_requisitos_faltantes(Faltantes) :-
     % Separar requisitos que son servicios (sistemas) de artefactos
-    findall(S, (member(S, Faltantes), sistema(_, S, _, _)), Servicios),
-    findall(A, (member(A, Faltantes), \+ sistema(_, A, _, _)), Artefactos),
+    findall(S, (member(S, Faltantes), sistema(_, S, _, _)), ServiciosSinOrden),
+    findall(A, (member(A, Faltantes), \+ sistema(_, A, _, _)), ArtefactosSinOrden),
+    sort(ServiciosSinOrden, Servicios),
+    sort(ArtefactosSinOrden, Artefactos),
     formatear_lista_legible(Artefactos, TextoArtefactos),
     formatear_lista_legible(Servicios, TextoServicios),
-    ( Artefactos \= [] -> format("Debes conseguir: ~w.~n", [TextoArtefactos]) ; true ),
-    ( Servicios \= [] -> format("Debes reparar: ~w.~n", [TextoServicios]) ; true ),
+    ( Artefactos \= [] -> format("Tienes que conseguir: ~w.~n", [TextoArtefactos]) ; true ),
+    ( Servicios \= [] -> format("Tienes que reparar: ~w.~n", [TextoServicios]) ; true ),
     ( Artefactos = [] , Servicios = [] -> writeln("Faltan requisitos no especificados.") ; true ).
 
 rescatar(Tripulante) :-
@@ -73,8 +75,9 @@ rescatar(Tripulante) :-
         format("Rescataste a ~w.~n", [Tripulante])
     ;   requisitos_faltantes_rescate(Requeridos, Faltantes),
         formatear_identificador_legible(Tripulante, TripLegible),
-        format("No puedes rescatar a ~w todavía. Para poder rescatarlo necesitas:\n", [TripLegible]),
+        format("No puedes rescatar a ~w todavía. Tienes que completar esto:\n", [TripLegible]),
         mostrar_requisitos_faltantes(Faltantes),
+        !,
         fail
     ).
 
@@ -82,9 +85,13 @@ rescatar(Tripulante) :-
     jugador(ModuloActual),
     tripulante(Tripulante, OtroModulo, _, atrapado),
     OtroModulo \= ModuloActual,
-    format("Okey, no puedes rescatar a ~w desde ~w porque está en ~w.~n", [Tripulante, ModuloActual, OtroModulo]),
+    formatear_identificador_legible(Tripulante, TripLegible),
+    formatear_identificador_legible(OtroModulo, ModuloLegible),
+    format("No puedes rescatar a ~w desde ~w porque esta en ~w. Tienes que ir a ~w para poder rescatarlo.~n", [TripLegible, ModuloActual, ModuloLegible, ModuloLegible]),
+    !,
     fail.
 
 rescatar(Tripulante) :-
     format("Okey, no encuentro a ~w atrapado en este momento.~n", [Tripulante]),
+    !,
     fail.

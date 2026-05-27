@@ -1,4 +1,4 @@
-import { parsearConexionesProlog, parsearEstadoProlog, parsearRegistroProlog, parsearPendientesProlog } from './parserProlog';
+import { parsearConexionesProlog, parsearEstadoProlog, parsearRegistroProlog, parsearPendientesProlog, parsearModulosInfo } from './parserProlog';
 
 const BASE_URL = 'http://localhost:3000/api';
 
@@ -57,6 +57,12 @@ export const apiService = {
         const res = await fetch(`${BASE_URL}/modulos`);
         const data = await manejarRespuesta(res);
         return data.list || [];
+    },
+
+    obtenerModulosInfo: async () => {
+        const res = await fetch(`${BASE_URL}/modulos_info`);
+        const data = await manejarRespuesta(res);
+        return parsearModulosInfo(data.raw || '[]');
     },
 
     obtenerArtefactos: async () => {

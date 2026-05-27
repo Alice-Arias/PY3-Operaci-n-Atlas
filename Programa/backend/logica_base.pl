@@ -65,15 +65,17 @@ faltantes_acceso_modulo(ModuloDestino, Artefactos, Sistemas, Previos) :-
     sort(PreviosSinOrden, Previos).
 
 motivo_no_puedo_ir(ModuloDestino, Mensaje) :-
-    jugador(ModuloOrigen),
+    jugador(_),
     \+ modulo(ModuloDestino, _),
-    format(atom(Mensaje), "No puedes acceder a ~w porque ese modulo no existe.", [ModuloDestino]).
+    format(atom(Mensaje), "No puedes acceder a ~w porque ese modulo no existe.", [ModuloDestino]),
+    !.
 
 motivo_no_puedo_ir(ModuloDestino, Mensaje) :-
     jugador(ModuloOrigen),
     modulo(ModuloDestino, _),
     \+ modulo_conectado(ModuloOrigen, ModuloDestino),
-    format(atom(Mensaje), "No puedes acceder a ~w desde ~w porque no hay una conexion directa.", [ModuloDestino, ModuloOrigen]).
+    format(atom(Mensaje), "No puedes acceder a ~w desde ~w porque no hay una conexion directa.", [ModuloDestino, ModuloOrigen]),
+    !.
 
 motivo_no_puedo_ir(ModuloDestino, Mensaje) :-
     jugador(ModuloOrigen),
@@ -82,20 +84,20 @@ motivo_no_puedo_ir(ModuloDestino, Mensaje) :-
     ( Artefactos \= [] ; Sistemas \= [] ; Previos \= [] ),
     formatear_lista_legible(Artefactos, TextoArtefactos),
     findall(Servicio, member(Servicio-_, Sistemas), ServiciosPendientes),
-    findall(Estado, member(_-Estado, Sistemas), EstadosPendientes),
     formatear_lista_legible(ServiciosPendientes, TextoServicios),
-    formatear_lista_legible(EstadosPendientes, TextoEstados),
     formatear_lista_legible(Previos, TextoPrevios),
     % Construir mensajes parciales solo si hay elementos pendientes
-    ( Artefactos \= [] -> format(atom(ParteArtefactos), "Debes conseguir: ~w.", [TextoArtefactos]) ; ParteArtefactos = "" ),
-    ( Servicios \= [] -> format(atom(ParteServicios), "Debes reparar: ~w.", [TextoServicios]) ; ParteServicios = "" ),
-    ( Previos \= [] -> format(atom(PartePrevios), "Debes pasar por: ~w.", [TextoPrevios]) ; PartePrevios = "" ),
+    ( Artefactos \= [] -> format(atom(ParteArtefactos), "Tienes que conseguir: ~w.", [TextoArtefactos]) ; ParteArtefactos = "" ),
+    ( ServiciosPendientes \= [] -> format(atom(ParteServicios), "Tienes que reparar: ~w.", [TextoServicios]) ; ParteServicios = "" ),
+    ( Previos \= [] -> format(atom(PartePrevios), "Tienes que pasar por: ~w.", [TextoPrevios]) ; PartePrevios = "" ),
     % Concatenar solo las partes que existen, separando con espacio para legibilidad
     atomic_list_concat([ParteArtefactos, ParteServicios, PartePrevios], ' ', PartesConcatenadas),
-    format(atom(Mensaje), "No puedes acceder a ~w todavía. ~w", [ModuloDestino, PartesConcatenadas]).
+    format(atom(Mensaje), "No puedes acceder a ~w todavia. ~w", [ModuloDestino, PartesConcatenadas]),
+    !.
 
 motivo_no_puedo_ir(ModuloDestino, Mensaje) :-
-    format(atom(Mensaje), "No puedes acceder a ~w en este momento.", [ModuloDestino]).
+    format(atom(Mensaje), "No puedes acceder a ~w en este momento.", [ModuloDestino]),
+    !.
 
 % Verifica todos los requisitos usando el predicado recibido.
 requerimientos_cumplidos([], _).

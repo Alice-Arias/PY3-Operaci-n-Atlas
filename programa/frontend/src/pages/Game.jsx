@@ -28,8 +28,53 @@ const ARTEFACTO_ICONS = {
     extintor: '🧯',
 };
 
+const ARTEFACTO_KEYWORDS = [
+    { words: ['traje', 'espacial', 'astronauta'], icon: '🧑‍🚀' },
+    { words: ['fusible', 'energia', 'bateria', 'electrico'], icon: '⚡' },
+    { words: ['tarjeta', 'credencial', 'acceso', 'seguridad'], icon: '🪪' },
+    { words: ['llave', 'clave'], icon: '🔑' },
+    { words: ['herramienta', 'kit', 'tool'], icon: '🔧' },
+    { words: ['extintor', 'fuego'], icon: '🧯' },
+    { words: ['medico', 'medicina', 'botiquin', 'salud'], icon: '💊' },
+    { words: ['datos', 'chip', 'usb', 'disco'], icon: '💾' },
+    { words: ['radio', 'comunicacion', 'senal'], icon: '📡' },
+];
+
+const ARTEFACTO_FALLBACK_EMOJIS = [
+'🔩', '🧰', '📦', '⚙️', '🧪', '🔋', '🪛', '🧲',
+'🛠️', '🧱', '💾', '🖥️', '📡', '🔌', '🧬', '🛰️',
+'🗜️', '⛓️', '🧯', '🚀', '🪐', '🔍', '📀', '🧿',
+'⚡', '💡', '🧠', '📁', '🗂️', '📝', '🧭', '🎛️',
+'🧵', '🪙', '🏗️', '🧼', '🧠', '🕹️', '⌨️', '🖱️'
+];
+function normalizarClave(valor) {
+    if (!valor) return '';
+    return valor
+        .toString()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim();
+}
+
+function hashTexto(texto) {
+    let hash = 0;
+    for (let i = 0; i < texto.length; i += 1) {
+        hash = (hash * 31 + texto.charCodeAt(i)) >>> 0;
+    }
+    return hash;
+}
+
 function getArtefactoIcon(nombre) {
-    return ARTEFACTO_ICONS[nombre] || '🔩';
+    const clave = normalizarClave(nombre);
+    if (!clave) return '🔩';
+
+    if (ARTEFACTO_ICONS[clave]) return ARTEFACTO_ICONS[clave];
+
+    const regla = ARTEFACTO_KEYWORDS.find(({ words }) => words.some((w) => clave.includes(w)));
+    if (regla) return regla.icon;
+
+    return ARTEFACTO_FALLBACK_EMOJIS[hashTexto(clave) % ARTEFACTO_FALLBACK_EMOJIS.length];
 }
 
 function normalizarEstadoTexto(valor) {
@@ -42,6 +87,21 @@ function normalizarEstadoTexto(valor) {
         .trim();
 }
 
+const CREW_EMOJIS = [
+'🧑‍🚀', '🧑‍🔧', '👩‍⚕️', '🧑‍💻', '👩‍🔬', '🕵️‍♂️',
+'👨‍🚀', '👩‍🚀', '🧑‍🎓', '👩‍🏭', '🧑‍✈️', '👨‍🔬',
+'👨‍⚕️', '👨‍💻', '👩‍💻', '🧑‍🔬', '👨‍🏭', '👷‍♀️',
+'👷‍♂️', '🧑‍🚒', '👨‍🚒', '👩‍🚒', '🧑‍🚒', '🧑‍🚀',
+'👨‍✈️', '👩‍✈️', '🧑‍🏫', '👨‍🏫', '👩‍🏫', '🧑‍🔬',
+'🧑‍🎤', '👨‍🎤', '👩‍🎤', '🧙‍♂️', '🧙‍♀️', '🦸‍♂️',
+'🦸‍♀️', '🧝‍♂️', '🧝‍♀️', '🤖', 
+];
+function estadoAClase(estado) {
+    const n = normalizarEstadoTexto(estado);
+    if (n === 'rescatado' || n === 'rescued') return 'rescued';
+    return 'trapped';
+}
+
 //Componente principal--------------------------------------------------------------------------------
 function Game() {
     const location   = useLocation();
@@ -50,6 +110,7 @@ function Game() {
 
     const [log, setLog]       = useState('Bienvenido a la Estación Atlas. Misión iniciada.');
     const [modulos, setModulos]     = useState([]);
+    const [descripcionesModulos, setDescripcionesModulos] = useState({});
     const [conexiones, setConexiones] = useState([]);
     const [estado, setEstado]       = useState(null);
     const [cargando, setCargando]   = useState(false);
@@ -234,19 +295,27 @@ function Game() {
 
     //Carga inicial--------------------------------------------------------------------------------
     const cargarDatos = useCallback(async () => {
-        const [resultadoModulos, resultadoEstado, resultadoConexiones] = await Promise.allSettled([
+        const [resultadoModulos, resultadoEstado, resultadoConexiones, resultadoModulosInfo] = await Promise.allSettled([
             apiService.obtenerModulos(),
             apiService.obtenerEstado(),
             apiService.obtenerConexiones(),
+            apiService.obtenerModulosInfo(),
         ]);
 
         const modulosCargados = resultadoModulos.status === 'fulfilled' ? resultadoModulos.value : [];
         const estadoCargado = resultadoEstado.status === 'fulfilled' ? resultadoEstado.value : null;
         const conexionesCargadas = resultadoConexiones.status === 'fulfilled' ? resultadoConexiones.value : [];
+        const modulosInfo = resultadoModulosInfo.status === 'fulfilled' ? resultadoModulosInfo.value : [];
+
+        const mapaDescripciones = modulosInfo.reduce((acc, item) => {
+            if (item?.modulo) acc[item.modulo] = item.descripcion || '';
+            return acc;
+        }, {});
 
         setModulos(modulosCargados);
         setEstado(estadoCargado);
         setConexiones(conexionesCargadas);
+        setDescripcionesModulos(mapaDescripciones);
 
         if (!modulosCargados.length || !estadoCargado) {
             setLog('Error al cargar datos principales del juego. Verifica que el servidor backend este activo.');
@@ -298,20 +367,16 @@ function Game() {
             }
 
             await evaluarVictoria();
-
-// ------------------------------------------Verificar victoria------------------------------------------------------
-            if (
-                mensajeSalida.toLowerCase().includes('ganaste') ||
-                mensajeSalida.toLowerCase().includes('victoria') ||
-                mensajeSalida.toLowerCase().includes('mision cumplida') ||
-                mensajeSalida.toLowerCase().includes('misión cumplida')
-            ) {
-                clearInterval(timerRef.current);
-                setVictoria(true);
-            }
         } catch (e) {
             const msg = e.message || 'Comando inválido.';
-            setLog(`Error: ${msg}`);
+            const mensajeFormateado = msg
+                .split(/\r?\n+/)
+                .map((linea) => linea.trim())
+                .filter(Boolean)
+                .map((linea) => linea.replace(/^[-•\s]+/, '').trim())
+                .map((linea, indice) => (indice === 0 ? linea : `- ${linea}`))
+                .join('\n');
+            setLog(`ERROR\n- ${mensajeFormateado}`);
             setErrorActual(msg);
             reproducirEfecto('error');
             await actualizarEstado();
@@ -370,20 +435,6 @@ function Game() {
     const handleOtraPartida = useCallback(() => {
         navigate('/');
     }, [navigate]);
-
-    const handleCargar = useCallback(async () => {
-        try {
-            iniciarAudioAmbiente();
-            await apiService.cargarMision();
-            setLog('Partida cargada. Reanudando misión...');
-            await cargarDatos();
-            reproducirEfecto('ok');
-            await evaluarVictoria();
-        } catch (e) {
-            setLog('Error al cargar la partida.');
-            reproducirEfecto('error');
-        }
-    }, [cargarDatos, iniciarAudioAmbiente, reproducirEfecto, evaluarVictoria]);
 
     useEffect(() => {
         return () => {
@@ -464,11 +515,14 @@ function Game() {
                     {/* Perfil */}
                     <div className="panel">
                         <div className="panel-header">
-                            <div className="panel-header-icon cyan"></div>
+                            <div className="panel-header-icon cyan">👽</div>
                             <span className="panel-title">Ingeniero</span>
                         </div>
                         <div className="profile-card">
-                            <div className="profile-avatar"></div>
+                            <div className="profile-avatar">
+                                <div className="profile-avatar-top">🧑‍🚀</div>
+                                <div className="profile-avatar-bottom">🛠️</div>
+                            </div>
                             <div className="profile-info">
                                 <span className="profile-name">{playerName}</span>
                                 <span className="profile-rank">Módulo Actual</span>
@@ -510,20 +564,19 @@ function Game() {
                         <div className="panel-body">
                             <div className="crew-list">
                                 {tripulantes.length > 0 ? (
-                                    tripulantes.map(t => {
-                                        const initials = t.nombre
-                                            ? t.nombre.slice(0, 2).toUpperCase()
-                                            : '??';
+                                    tripulantes.map((t, i) => {
+                                        const emoji = CREW_EMOJIS[i % CREW_EMOJIS.length];
                                         const status = t.estado || 'atrapado';
+                                        const clase = estadoAClase(status);
                                         return (
-                                            <div key={t.nombre} className="crew-member">
-                                                <div className={`crew-avatar ${status}`}>{initials}</div>
+                                            <div key={t.nombre || i} className="crew-member">
+                                                <div className={`crew-avatar ${clase}`}>{emoji}</div>
                                                 <div className="crew-info">
                                                     <span className="crew-name">{formatNombre(t.nombre)}</span>
                                                     <span className="crew-location">{formatNombre(t.modulo)}</span>
                                                 </div>
-                                                <span className={`crew-status-badge ${status}`}>
-                                                    {status === 'rescatado' ? 'Rescatado' : 'Atrapado'}
+                                                <span className={`crew-status-badge ${clase}`}>
+                                                    {clase === 'rescued' ? 'Rescatado' : 'Atrapado'}
                                                 </span>
                                             </div>
                                         );
@@ -563,7 +616,12 @@ function Game() {
 
                 {/* COLUMNA CENTRAL */}
                 <section className="col-center">
-                    <MapaVisual modulos={modulos} conexiones={conexiones} estado={estado} />
+                    <MapaVisual
+                        modulos={modulos}
+                        conexiones={conexiones}
+                        estado={estado}
+                        descripcionesModulos={descripcionesModulos}
+                    />
 
                     {/* Panel de movimiento debajo del mapa */}
                     <div className="movement-panel">
@@ -644,8 +702,8 @@ function Game() {
                             <button className="btn-save" onClick={handleGuardar} disabled={cargando}>
                                 Guardar Misión
                             </button>
-                            <button className="btn-load" onClick={handleCargar} disabled={cargando}>
-                                Cargar Misión
+                            <button className="btn-load" onClick={handleOtraPartida} disabled={cargando}>
+                                Salir
                             </button>
                         </div>
                     </div>

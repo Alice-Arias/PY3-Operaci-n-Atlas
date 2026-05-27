@@ -16,18 +16,30 @@ function limpiarMensajeErrorProlog(mensajeError) {
         return 'No se pudo completar la accion. Verifica los requisitos e intenta de nuevo.';
     }
 
-    const lineasUtiles = textoBase
-        .split(/\r?\n/)
-        .map((linea) => linea.trim())
-        .filter((linea) => linea.length > 0)
-        .filter((linea) => !/^Warning:/i.test(linea))
-        .filter((linea) => !/Previously defined at/i.test(linea))
-        .filter((linea) => !/^[A-Za-z]:\//.test(linea));
+    const lineasUtiles = Array.from(new Set(
+        textoBase
+            .split(/\r?\n/)
+            .map((linea) => linea.trim())
+            .filter((linea) => linea.length > 0)
+            .filter((linea) => !/^Warning:/i.test(linea))
+            .filter((linea) => !/Previously defined at/i.test(linea))
+            .filter((linea) => !/^[A-Za-z]:\//.test(linea))
+    ));
 
     const textoFiltrado = lineasUtiles.join(' ');
 
+    const mensajeBase = 'La accion no pudo completarse.';
+
+    const lineasExplicativas = lineasUtiles.filter((linea) => /^(No puedes|Debes|Te falta|Te faltan|No cumples|Faltan|No hay una conexion directa|No puedes rescatar|No puedes acceder|Tienes que|No se encontro una accion valida|Okey)/i.test(linea));
+    if (lineasExplicativas.length > 0) {
+        return lineasExplicativas
+            .map((linea) => linea.replace(/^[-•\s]+/, '').trim())
+            .filter(Boolean)
+            .join(' ');
+    }
+
     if (!textoFiltrado || /halt|Execution Aborted/i.test(textoFiltrado)) {
-        return 'La accion no pudo completarse. Verifica que cumples los requisitos de la mision.';
+        return `${mensajeBase} Verifica los requisitos de la mision.`;
     }
 
     if (/existence_error|Undefined procedure/i.test(textoFiltrado)) {
@@ -44,7 +56,7 @@ function limpiarMensajeErrorProlog(mensajeError) {
     }
 
     // Priorizar líneas explicativas (evitar mostrar mensajes genéricos mezclados)
-    const explicativas = lineasUtiles.filter(l => /^(No puedes|Debes|Okey|No se|ERROR|Te falta|Te faltan|No puedes rescatar|No puedes acceder)/i.test(l));
+    const explicativas = lineasUtiles.filter(l => /^(No puedes|Debes|Okey|No se|ERROR|Te falta|Te faltan|No cumples|Faltan|No puedes rescatar|No puedes acceder|No hay una conexion directa|Tienes que)/i.test(l));
     if (explicativas.length > 0) {
         return explicativas.join(' ');
     }
@@ -53,10 +65,10 @@ function limpiarMensajeErrorProlog(mensajeError) {
     if (lineasUtiles.length > 0) return lineasUtiles[lineasUtiles.length - 1];
 
     if (textoFiltrado.length > 260) {
-        return 'Se produjo un error al ejecutar la accion en Prolog.';
+        return mensajeBase + ' Revisa la razon detallada en la consola.';
     }
 
-    return textoFiltrado;
+    return textoFiltrado || `${mensajeBase} Revisa la razon detallada en la consola.`;
 }
 
 function convertirSalida(textoSalida) {
