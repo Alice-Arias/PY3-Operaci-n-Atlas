@@ -1,1 +1,13 @@
-partida_registro(prueba,0,'data/partida_prueba_0.sav',pendiente).
+partida_registro('Alice',0,'data/partida_Alice_0.sav',finalizada).
+partida_registro('Alice',1,'data/partida_Alice_1.sav',pendiente).
+partida_registro('Heldys',2,'data/partida_Heldys_2.sav',pendiente).
+partida_registro('Yeremi',3,'data/partida_Yeremi_3.sav',finalizada).
+partida_registro('Juan',4,'data/partida_Juan_4.sav',pendiente).
+partida_registro('Juan',5,'data/partida_Juan_5.sav',pendiente).
+partida_registro('Jeusel',6,'data/partida_Jeusel_6.sav',pendiente).
+partida_registro('Vannessa',7,'data/partida_Vannessa_7.sav',pendiente).
+partida_registro('Jeusel',8,'data/partida_Jeusel_8.sav',pendiente).
+partida_registro('Jeusel',9,'data/partida_Jeusel_9.sav',pendiente).
+partida_registro('Josue',10,'data/partida_Josue_10.sav',pendiente).
+partida_registro('Susana',11,'data/partida_Susana_11.sav',pendiente).
+partida_registro('Susana',12,'data/partida_Susana_12.sav',pendiente).

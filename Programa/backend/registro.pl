@@ -1,5 +1,5 @@
-% Este modulo maneja el registro de partidas por jugador.
-% Descripcion: crea IDs, busca partidas pendientes y reanuda guardados.
+% maneja registro de partidas de jugadores.
+% Descripcion: crea ids, buscar partidas pendientes, reanuda guardados.
 % Entrada: nombre del jugador o id de partida.
 % Salida: registro persistente y archivos por partida.
 % Restricciones: usa la carpeta `partidas guardadas`.
@@ -42,7 +42,25 @@ generar_id_partida(IdPartida) :-  findall(Id, (partida_registro(_, Id, _, _), in
 % Salida: carga los hechos `partida_registro/4`.
 % Restricciones: si no existe el archivo, no hace nada.
 cargar_registro_partidas :- retractall(partida_registro(_, _, _, _)), archivo_registro_partidas(Archivo), exists_file(Archivo), consult(Archivo), !.
-cargar_registro_partidas.
+cargar_registro_partidas :- limpiar_registros_sin_archivo.
+
+limpiar_registros_sin_archivo :-
+    findall(
+        partida_registro(Nombre, Id, Archivo, Estado),
+        partida_registro(Nombre, Id, Archivo, Estado),
+        Registros
+    ),
+    include(registro_con_archivo_existente, Registros, RegistrosValidos),
+    ( Registros == RegistrosValidos ->
+        true
+    ;
+        retractall(partida_registro(_, _, _, _)),
+        forall(member(Registro, RegistrosValidos), assertz(Registro)),
+        persistir_registro_partidas
+    ).
+
+registro_con_archivo_existente(partida_registro(_, _, Archivo, _)) :-
+    exists_file(Archivo).
 
 % persistir_registro_partidas/0
 % Descripcion: escribe el registro actual en disco.
@@ -61,7 +79,16 @@ persistir_registro_partidas :- archivo_registro_partidas(Archivo),
 % Entrada: nombre del jugador.
 % Salida: lista de partidas sin terminar.
 % Restricciones: solo devuelve partidas con estado pendiente.
-partidas_pendientes(NombreJugador, Pendientes) :- findall(partida(Id, Archivo), partida_registro(NombreJugador, Id, Archivo, pendiente), Pendientes).
+partidas_pendientes(NombreJugador, Pendientes) :-
+    downcase_atom(NombreJugador, Buscado),
+    findall(
+        partida(Id, Archivo),
+        (
+            partida_registro(Nombre, Id, Archivo, pendiente),
+            downcase_atom(Nombre, Buscado)
+        ),
+        Pendientes
+    ).
 
 avisar_partidas_pendientes(NombreJugador) :-
     partidas_pendientes(NombreJugador, Pendientes),
@@ -73,15 +100,31 @@ avisar_partidas_pendientes(NombreJugador) :-
 % Salida: crea estado inicial, id y registro.
 % Restricciones: si ya hay partidas pendientes, avisa primero.
 iniciar_partida(NombreJugador) :-
-    partidas_pendientes(NombreJugador, Pendientes),
-    ( Pendientes \= []
-    -> format("Tienes estas partidas sin finalizar: ~w~n", [Pendientes]),writeln("Deseas terminarlas? Usa cargar_partida_id/1 para continuar una de ellas.")
-    ; estado_inicial, generar_id_partida(IdPartida),
-        assertz(jugador_nombre(NombreJugador)),
-        assertz(partida_actual(IdPartida)),
-        partida_archivo(NombreJugador, IdPartida, Archivo),
-        registrar_partida(NombreJugador, IdPartida, Archivo, pendiente),
-        format("Partida iniciada para ~w con id ~w.~n", [NombreJugador, IdPartida]) ).
+    estado_inicial,
+
+    retractall(jugador_nombre(_)),
+    retractall(partida_actual(_)),
+
+    generar_id_partida(IdPartida),
+
+    assertz(jugador_nombre(NombreJugador)),
+    assertz(partida_actual(IdPartida)),
+
+    partida_archivo(NombreJugador, IdPartida, Archivo),
+
+    registrar_partida(
+        NombreJugador,
+        IdPartida,
+        Archivo,
+        pendiente
+    ),
+
+    guardar_partida,
+
+    format(
+        "Partida iniciada para ~w con id ~w.~n",
+        [NombreJugador, IdPartida]
+    ).
 
 % cargar_partida_id/1
 % Descripcion: abre una partida usando su id.

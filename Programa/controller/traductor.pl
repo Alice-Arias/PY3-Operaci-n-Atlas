@@ -1,63 +1,233 @@
-% Traductor (capa de interfaz entre frontend y backend)
-% Descripcion: predicados sencillos que delegan en la logica del juego.
-% Nota: aqui NO va la logica del juego, solo se exponen "contratos" claros
-% que el frontend (o el servidor HTTP) puede invocar.
+% =============================================================================
+% TRADUCTOR — Capa de interfaz entre frontend y backend
+%
+% ARQUITECTURA DE PERSISTENCIA:
+%   Cada llamada a swipl inicia un proceso nuevo y se perdia el proceso porque se reiniciaba todo.
+%   para que se mantenga el progreso:
+%     1. Restaurar el estado desde disco al inicio.
+%     2. Ejecuta la logica del juego.
+%     3. Guardar el nuevo estado en disco al final(que es un archivo que se crea que se llama estado_ui.pl).
+% =============================================================================
+
+:- use_module(library(lists)).
 
 % -----------------------------------------------------------------------------
-% ctrl_estado_inicial/0
-% Descripcion: reinicia el estado del juego (llama a estado_inicial/0 del backend).
-% Entrada: ninguna.
-% Salida: el estado dinamico del juego queda reiniciado en memoria.
-% Restricciones: requiere que backend/datos.pl y backend/estado.pl esten cargados.
-% Nombre simple para la UI: reiniciar_estado/0
-reiniciar_estado_ui :-  estado_inicial.
+% REINICIAR ESTADO
+% -----------------------------------------------------------------------------
+reiniciar_estado_ui :-
+    borrar_estado_en_disco,
+    estado_inicial,
+    guardar_estado_en_disco.
+% -----------------------------------------------------------------------------
+% LISTAR MODULOS
+% (son estaticos)
+% -----------------------------------------------------------------------------
+listar_modulos_ui(Modulos) :-
+    findall(
+        Modulo,
+        modulo(Modulo, _),
+        Modulos
+    ).
 
 % -----------------------------------------------------------------------------
-% ctrl_listar_modulos/1
-% Descripcion: devuelve la lista de modulos del mundo.
-% Entrada: una variable que recibira la lista.
-% Salida: Modulos es una lista de átomos con los nombres de los modulos.
-% Restricciones: lee hechos modulo/2 definidos en backend/datos.pl.
-listar_modulos_ui(Modulos) :-  findall(Modulo, modulo(Modulo,_), Modulos).
+% LISTAR MODULOS CON DESCRIPCION
+% -----------------------------------------------------------------------------
+listar_modulos_info_ui(ModulosInfo) :-
+    findall(
+        modulo_data(Modulo, Descripcion),
+        modulo(Modulo, Descripcion),
+        ModulosInfoSinOrden
+    ),
+    sort(ModulosInfoSinOrden, ModulosInfo).
+% -----------------------------------------------------------------------------
+% LISTAR ARTEFACTOS
+% (son estaticos)
+% -----------------------------------------------------------------------------
+listar_artefactos_ui(Artefactos) :-
+    findall(
+        Artefacto,
+        artefacto(Artefacto, _),
+        Artefactos
+    ).
 
 % -----------------------------------------------------------------------------
-% ctrl_listar_artefactos/1
-% Descripcion: devuelve la lista de artefactos definidos en el mundo.
-% Entrada: una variable que recibira la lista.
-% Salida: Artefactos es una lista de átomos con los nombres de los artefactos.
-% Restricciones: lee hechos artefacto/2 definidos en backend/datos.pl.
-listar_artefactos_ui(Artefactos) :- findall(Artefacto, artefacto(Artefacto,_), Artefactos).
+% LISTAR CONEXIONES ENTRE MODULOS
+% -----------------------------------------------------------------------------
+listar_conexiones_ui(Conexiones) :-
+    findall(
+        conexion(Origen, Destino),
+        enlace(Origen, Destino),
+        Conexiones
+    ).
 
 % -----------------------------------------------------------------------------
-% ctrl_iniciar_partida/1
-% Descripcion: inicia una partida para un jugador dado (delegando a iniciar_partida/1).
-% Entrada: NombreJugador (atom o string convertible a atom).
-% Salida: se crea el estado inicial y se registra la partida.
-% Restricciones: si hay partidas pendientes, el backend puede avisar.
-iniciar_partida_ui(NombreJugador) :- iniciar_partida(NombreJugador).
+% LISTAR REGISTRO DE PARTIDAS
+% -----------------------------------------------------------------------------
+listar_registro_partidas_ui(Registros) :-
+    findall(
+        partida_registro(Jugador, IdPartida, Archivo, Estado),
+        partida_registro(Jugador, IdPartida, Archivo, Estado),
+        RegistrosSinOrden
+    ),
+    sort(RegistrosSinOrden, Registros).
 
 % -----------------------------------------------------------------------------
-% ctrl_partida_actual/1
-% Descripcion: obtiene el id de la partida actualmente activa.
-% Entrada: una variable que recibira el id.
-% Salida: IdPartida (numero o atomo, segun implementacion).
-% Restricciones: requiere que exista una partida activa.
-partida_actual_ui(IdPartida) :- partida_actual(IdPartida).
+% LISTAR PARTIDAS PENDIENTES POR JUGADOR
+% -----------------------------------------------------------------------------
+listar_partidas_pendientes_ui(NombreJugador, Pendientes) :-
+    partidas_pendientes(NombreJugador, PendientesSinOrden),
+    sort(PendientesSinOrden, Pendientes).
+% -----------------------------------------------------------------------------
+% INICIAR PARTIDA
+% se borra los datos del estado anterior guardado para crear dinamicamente el nuevo
+% -----------------------------------------------------------------------------
+iniciar_partida_ui(NombreJugador) :-
+    borrar_estado_en_disco,
+    estado_inicial,
+    generar_id_partida(IdPartida),
+    retractall(jugador_nombre(_)),
+    retractall(partida_actual(_)),
+    assertz(jugador_nombre(NombreJugador)),
+    assertz(partida_actual(IdPartida)),
+    partida_archivo(NombreJugador, IdPartida, Archivo),
+
+    registrar_partida(
+        NombreJugador,
+        IdPartida,
+        Archivo,
+        pendiente
+    ),
+    guardar_estado_en_disco,
+    format(
+        "Partida iniciada para ~w con id ~w.",
+        [NombreJugador, IdPartida]
+    ).
 
 % -----------------------------------------------------------------------------
-% ctrl_tomar/1
-% Descripcion: intenta que el jugador tome un artefacto (delegando a tomar/1).
-% Entrada: Artefacto (atom).
-% Salida: efecto secundario en el estado (agrega artefacto al inventario si es posible).
-% Restricciones: el jugador debe estar en el modulo donde esta el artefacto.
-tomar_artefacto_ui(Artefacto) :- tomar(Artefacto).
-
+% PARTIDA ACTUAL
 % -----------------------------------------------------------------------------
-% ctrl_guardar_partida/0
-% Descripcion: guarda la partida actual en disco (delegando a guardar_partida/0).
-% Entrada: ninguna.
-% Salida: crea o actualiza el archivo .sav correspondiente.
-% Restricciones: debe existir una partida activa (o usara archivo por defecto).
-guardar_partida_ui :- guardar_partida.
-
-
+partida_actual_ui(IdPartida) :-
+    restaurar_estado_desde_disco,
+    partida_actual(IdPartida).
+% -----------------------------------------------------------------------------
+% TOMAR ARTEFACTO
+% -----------------------------------------------------------------------------
+tomar_artefacto_ui(Artefacto) :-
+    restaurar_estado_desde_disco,
+    tomar(Artefacto),
+    guardar_estado_en_disco.
+% -----------------------------------------------------------------------------
+% MOVER
+% -----------------------------------------------------------------------------
+mover_ui(Modulo) :-
+    restaurar_estado_desde_disco,
+    mover(Modulo),
+    guardar_estado_en_disco.
+% -----------------------------------------------------------------------------
+% REPARAR
+% -----------------------------------------------------------------------------
+reparar_ui(Sistema) :-
+    restaurar_estado_desde_disco,
+    reparar(Sistema),
+    guardar_estado_en_disco.
+% -----------------------------------------------------------------------------
+% RESCATAR
+% -----------------------------------------------------------------------------
+rescatar_ui(Tripulante) :-
+    restaurar_estado_desde_disco,
+    rescatar(Tripulante),
+    guardar_estado_en_disco.
+% -----------------------------------------------------------------------------
+% GUARDAR PARTIDA (manual)
+% -----------------------------------------------------------------------------
+guardar_partida_ui :-
+    restaurar_estado_desde_disco,
+    guardar_partida,
+    guardar_estado_en_disco.
+% -----------------------------------------------------------------------------
+% CARGAR PARTIDA
+% -----------------------------------------------------------------------------
+cargar_partida_ui(IdPartida) :-
+    cargar_partida_id(IdPartida),
+    guardar_estado_en_disco.
+% -----------------------------------------------------------------------------
+% AYUDA
+% -----------------------------------------------------------------------------
+ayuda_ui :-
+    restaurar_estado_desde_disco,
+    como_gano.
+% -----------------------------------------------------------------------------
+% VERIFICAR VICTORIA
+% -----------------------------------------------------------------------------
+verifica_victoria_ui :-
+    restaurar_estado_desde_disco,
+    verifica_gane.
+% -----------------------------------------------------------------------------
+% ESTADO GLOBAL PARA REACT
+% Restaura el estado desde disco y construye el termino estado/7
+% con toda la informacion que necesita el frontend para que muestre los datos.
+% -----------------------------------------------------------------------------
+estado_ui(
+    estado(
+        ModuloActual,
+        Inventario,
+        Visitados,
+        Sistemas,
+        Tripulantes,
+        ModulosConectados,
+        ArtefactosDisponibles
+    )
+) :-
+    restaurar_estado_desde_disco,
+    % -----------------------------------------------------------------
+    % POSICION ACTUAL DEL JUGADOR
+    % -----------------------------------------------------------------
+    jugador(ModuloActual),
+    % -----------------------------------------------------------------
+    % INVENTARIO
+    % -----------------------------------------------------------------
+    artefactosLogrados(Inventario),
+    % -----------------------------------------------------------------
+    % MODULOS VISITADOS
+    % -----------------------------------------------------------------
+    findall(
+        Visitado,
+        visitado(Visitado),
+        Visitados
+    ),
+    % -----------------------------------------------------------------
+    % SISTEMAS DEL JUEGO (estado actual)
+    % -----------------------------------------------------------------
+    findall(
+        sistema_data(Modulo, Sistema, Estado),
+        sistema(Modulo, Sistema, _, Estado),
+        Sistemas
+    ),
+    % -----------------------------------------------------------------
+    % TRIPULANTES (estado actual)
+    % -----------------------------------------------------------------
+    findall(
+        tripulante_data(Nombre, Modulo, Estado),
+        tripulante(Nombre, Modulo, _, Estado),
+        Tripulantes
+    ),
+    % -----------------------------------------------------------------
+    % MODULOS CONECTADOS AL ACTUAL (accesibles desde aqui)
+    % -----------------------------------------------------------------
+    findall(
+        Conexion,
+        modulo_conectado(ModuloActual, Conexion),
+        ModulosConectadosSinOrden
+    ),
+    sort(ModulosConectadosSinOrden, ModulosConectados),
+    % -----------------------------------------------------------------
+    % ARTEFACTOS DISPONIBLES (no tomados aun)
+    % -----------------------------------------------------------------
+    findall(
+        artefacto_data(Artefacto, Modulo),
+        (
+            artefacto(Artefacto, Modulo),
+            \+ tomado(Artefacto)
+        ),
+        ArtefactosDisponibles
+    ).
