@@ -74,14 +74,14 @@ guardar_hechos_en_stream(Stream) :-
 restaurar_estado_desde_disco :-
     archivo_estado(Archivo),
     (   exists_file(Archivo)
-    ->  limpiar_estado_dinamico,
+    ->  limpiar_estado_para_persistencia,
         consult(Archivo)
     ;   true   % Si no existe el archivo, usar el estado inicial de main.pl
     ).
 % -----------------------------------------------------------------------------
 % LIMPIAR ESTADO DINAMICO
 % -----------------------------------------------------------------------------
-limpiar_estado_dinamico :-
+limpiar_estado_para_persistencia :-
     retractall(jugador(_)),
     retractall(artefactosLogrados(_)),
     retractall(tomado(_)),

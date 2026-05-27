@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;900&family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&display=swap');
+
 .home {
     min-height: 100vh;
 
@@ -28,7 +30,8 @@
     margin: 0;
 
     font-size: clamp(4rem, 10vw, 8rem);
-    font-weight: 300;
+    font-family: 'Orbitron', monospace;
+    font-weight: 500;
 
     letter-spacing: 0.5rem;
     text-transform: uppercase;
@@ -42,8 +45,8 @@
 
     text-shadow:
         0 0 6px rgba(255, 255, 255, 0.15),
-        0 0 18px rgba(0, 180, 255, 0.2),
-        0 0 40px rgba(0, 120, 255, 0.15),
+        0 0 18px rgba(0, 212, 255, 0.28),
+        0 0 40px rgba(0, 120, 255, 0.18),
         0 0 90px rgba(0, 0, 0, 0.6);
 
     animation: atlasGlow 3.5s ease-in-out infinite;
@@ -83,13 +86,13 @@
     font-weight: inherit;
     letter-spacing: inherit;
 
-    color: rgba(255, 0, 0, 0.28);
+    color: rgba(0, 212, 255, 0.22);
 
     z-index: 0;
 
     text-shadow:
-        0 0 25px rgba(255, 0, 0, 0.7),
-        0 0 60px rgba(255, 0, 0, 0.4);
+        0 0 25px rgba(0, 212, 255, 0.5),
+        0 0 60px rgba(0, 212, 255, 0.25);
 
     filter: blur(1px);
 
@@ -127,12 +130,12 @@
     background: linear-gradient(
         90deg,
         transparent,
-        rgba(255, 0, 0, 0.6),
+        rgba(0, 212, 255, 0.72),
         transparent
     );
 
     box-shadow:
-        0 0 12px rgba(255, 0, 0, 0.25);
+        0 0 12px rgba(0, 212, 255, 0.34);
 }
 
 /* =========================
@@ -146,6 +149,7 @@
 
     transform: translate(-50%, -50%);
 
+    font-family: 'Share Tech Mono', monospace;
     margin: 0;
 
     font-size: 0.95rem;
@@ -155,7 +159,7 @@
 
     white-space: nowrap; /* 🔥 UNA SOLA LÍNEA */
 
-    color: rgb(134, 45, 45);
+    color: #7ba5c8;
 
     text-transform: uppercase;
 
@@ -166,8 +170,8 @@
     animation: faultyFlicker 2.8s infinite;
 
     text-shadow:
-        0 0 10px rgba(255, 0, 0, 0.7),
-        0 0 25px rgba(255, 0, 0, 0.4);
+        0 0 10px rgba(0, 212, 255, 0.35),
+        0 0 25px rgba(0, 212, 255, 0.2);
 }
 
 /* flicker */
@@ -214,15 +218,11 @@
     padding: 2.2rem;
     border-radius: 24px;
 
-    background: linear-gradient(
-        145deg,
-        rgba(255, 255, 255, 0.028),
-        rgba(255, 255, 255, 0.012)
-    );
+    background: linear-gradient(145deg, rgba(11, 17, 32, 0.82), rgba(14, 22, 40, 0.7));
 
     backdrop-filter: blur(10px);
 
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(0, 180, 255, 0.2);
 
     box-shadow:
         0 0 40px rgba(0, 0, 0, 0.35),

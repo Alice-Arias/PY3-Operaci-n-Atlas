@@ -38,6 +38,34 @@ listar_artefactos_ui(Artefactos) :-
         artefacto(Artefacto, _),
         Artefactos
     ).
+
+% -----------------------------------------------------------------------------
+% LISTAR CONEXIONES ENTRE MODULOS
+% -----------------------------------------------------------------------------
+listar_conexiones_ui(Conexiones) :-
+    findall(
+        conexion(Origen, Destino),
+        enlace(Origen, Destino),
+        Conexiones
+    ).
+
+% -----------------------------------------------------------------------------
+% LISTAR REGISTRO DE PARTIDAS
+% -----------------------------------------------------------------------------
+listar_registro_partidas_ui(Registros) :-
+    findall(
+        partida_registro(Jugador, IdPartida, Archivo, Estado),
+        partida_registro(Jugador, IdPartida, Archivo, Estado),
+        RegistrosSinOrden
+    ),
+    sort(RegistrosSinOrden, Registros).
+
+% -----------------------------------------------------------------------------
+% LISTAR PARTIDAS PENDIENTES POR JUGADOR
+% -----------------------------------------------------------------------------
+listar_partidas_pendientes_ui(NombreJugador, Pendientes) :-
+    partidas_pendientes(NombreJugador, PendientesSinOrden),
+    sort(PendientesSinOrden, Pendientes).
 % -----------------------------------------------------------------------------
 % INICIAR PARTIDA
 % se borra los datos del estado anterior guardado para crear dinamicamente el nuevo
@@ -178,8 +206,9 @@ estado_ui(
     findall(
         Conexion,
         modulo_conectado(ModuloActual, Conexion),
-        ModulosConectados
+        ModulosConectadosSinOrden
     ),
+    sort(ModulosConectadosSinOrden, ModulosConectados),
     % -----------------------------------------------------------------
     % ARTEFACTOS DISPONIBLES (no tomados aun)
     % -----------------------------------------------------------------

@@ -56,11 +56,17 @@ necesita(modulo_energia, traje_espacial).
 necesita(camaras_seguridad, tarjeta_seguridad).
 necesita(modulo_escape, energia).
 necesita(centro_comunicaciones, energia).
-necesita(modulo_medico, medicina).
+% El módulo médico originalmente listaba 'medicina' como requisito para acceder,
+% lo cual generaba una condición circular (no se puede obtener la medicina sin
+% entrar al módulo). Quitamos esa restricción para que el jugador pueda entrar
+% desde `enfermeria` y tomar la medicina.
+% necesita(modulo_medico, medicina).
 
 necesita_estado(modulo_escape, energia, restaurado).
 necesita_estado(centro_comunicaciones, comunicaciones, restaurado).
-necesita_estado(modulo_medico, medicina, restaurado).
+% El módulo médico solo requiere el artefacto `medicina` para acceder.
+% Evitamos requerir un "estado" inexistente asociado a 'medicina'.
+% necesita_estado(modulo_medico, medicina, restaurado).
 
 paso_previo(modulo_escape, modulo_energia).
 paso_previo(centro_comunicaciones, modulo_energia).
@@ -69,6 +75,7 @@ objetivo_sistema(energia, restaurado).
 objetivo_sistema(comunicaciones, restaurado).
 objetivo_tripulante(elena, rescatado).
 objetivo_tripulante(kai, rescatado).
+objetivo_tripulante(sophia, rescatado).
 
 % Estado inicial del jugador.
 % Entrada: ninguna.

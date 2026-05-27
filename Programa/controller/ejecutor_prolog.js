@@ -73,16 +73,19 @@ function ejecutarComando(metaCompleta) {
             out: salida.trim()
         };
     } catch (error) {
-        const mensajeError = (error.stderr || error.stdout || error.message || '').toString().trim();
-        if (!mensajeError && error.status !== 0) {
-            return {
-                ok: false,
-                err: "La accion no pudo completarse. Verifica que cumples los requisitos."
-            };
-        }
+        // Construir un mensaje con stdout, stderr y message para no perder los prints de Prolog
+        const stdoutText = (error.stdout && typeof error.stdout === 'string') ? error.stdout : (error.stdout ? error.stdout.toString() : '');
+        const stderrText = (error.stderr && typeof error.stderr === 'string') ? error.stderr : (error.stderr ? error.stderr.toString() : '');
+        const mensajeParts = [];
+        if (stdoutText && stdoutText.toString().trim()) mensajeParts.push(stdoutText.toString().trim());
+        if (stderrText && stderrText.toString().trim()) mensajeParts.push(stderrText.toString().trim());
+        if (error.message) mensajeParts.push(error.message.toString());
+        const mensajeError = mensajeParts.join('\n').trim();
+
+        const fallback = 'La accion no pudo completarse. Verifica que cumples los requisitos.';
         return {
             ok: false,
-            err: mensajeError
+            err: mensajeError || fallback
         };
     }
 }

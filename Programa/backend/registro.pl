@@ -42,7 +42,25 @@ generar_id_partida(IdPartida) :-  findall(Id, (partida_registro(_, Id, _, _), in
 % Salida: carga los hechos `partida_registro/4`.
 % Restricciones: si no existe el archivo, no hace nada.
 cargar_registro_partidas :- retractall(partida_registro(_, _, _, _)), archivo_registro_partidas(Archivo), exists_file(Archivo), consult(Archivo), !.
-cargar_registro_partidas.
+cargar_registro_partidas :- limpiar_registros_sin_archivo.
+
+limpiar_registros_sin_archivo :-
+    findall(
+        partida_registro(Nombre, Id, Archivo, Estado),
+        partida_registro(Nombre, Id, Archivo, Estado),
+        Registros
+    ),
+    include(registro_con_archivo_existente, Registros, RegistrosValidos),
+    ( Registros == RegistrosValidos ->
+        true
+    ;
+        retractall(partida_registro(_, _, _, _)),
+        forall(member(Registro, RegistrosValidos), assertz(Registro)),
+        persistir_registro_partidas
+    ).
+
+registro_con_archivo_existente(partida_registro(_, _, Archivo, _)) :-
+    exists_file(Archivo).
 
 % persistir_registro_partidas/0
 % Descripcion: escribe el registro actual en disco.
@@ -61,7 +79,16 @@ persistir_registro_partidas :- archivo_registro_partidas(Archivo),
 % Entrada: nombre del jugador.
 % Salida: lista de partidas sin terminar.
 % Restricciones: solo devuelve partidas con estado pendiente.
-partidas_pendientes(NombreJugador, Pendientes) :- findall(partida(Id, Archivo), partida_registro(NombreJugador, Id, Archivo, pendiente), Pendientes).
+partidas_pendientes(NombreJugador, Pendientes) :-
+    downcase_atom(NombreJugador, Buscado),
+    findall(
+        partida(Id, Archivo),
+        (
+            partida_registro(Nombre, Id, Archivo, pendiente),
+            downcase_atom(Nombre, Buscado)
+        ),
+        Pendientes
+    ).
 
 avisar_partidas_pendientes(NombreJugador) :-
     partidas_pendientes(NombreJugador, Pendientes),

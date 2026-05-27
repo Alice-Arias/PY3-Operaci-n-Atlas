@@ -657,12 +657,120 @@ body {
 .legend-dot.red    { background: var(--c-accent-red); }
 .legend-dot.amber  { background: var(--c-accent-amber); }
 .legend-dot.cyan   { background: var(--c-accent-cyan); border: 2px solid var(--c-accent-cyan); border-radius: 0; }
+.legend-dot.gray   { background: var(--c-text-dim); }
 
 /* Grid del mapa de módulos */
 .mapa-grid {
     position: relative;
     padding: 24px 20px;
     z-index: 1;
+}
+
+.mapa-grafo {
+    position: relative;
+    width: 100%;
+    height: 230px;
+    border: 1px solid rgba(0, 180, 255, 0.14);
+    border-radius: var(--radius-lg);
+    background: radial-gradient(circle at center, rgba(0, 180, 255, 0.06), rgba(8, 16, 30, 0.5));
+    margin-bottom: 16px;
+    overflow: hidden;
+}
+
+.mapa-grafo-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.linea-grafo {
+    stroke: rgba(123, 165, 200, 0.55);
+    stroke-width: 0.72;
+}
+
+.linea-grafo.activa {
+    stroke: rgba(0, 212, 255, 0.9);
+    stroke-width: 0.92;
+    filter: drop-shadow(0 0 6px rgba(0, 212, 255, 0.4));
+}
+
+.linea-grafo.posible {
+    stroke: rgba(0, 255, 157, 0.95);
+    stroke-width: 1.1;
+    filter: drop-shadow(0 0 8px rgba(0, 255, 157, 0.42));
+}
+
+.linea-grafo.sugerida {
+    stroke: rgba(255, 68, 68, 0.92);
+    stroke-width: 1.1;
+    filter: drop-shadow(0 0 8px rgba(255, 68, 68, 0.42));
+}
+
+.linea-grafo.tenue {
+    stroke: rgba(123, 165, 200, 0.18);
+    stroke-width: 0.6;
+}
+
+.nodo-grafo {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    pointer-events: auto;
+    cursor: pointer;
+}
+
+.nodo-grafo-punto {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: rgba(123, 165, 200, 0.9);
+    box-shadow: 0 0 8px rgba(123, 165, 200, 0.35);
+}
+
+.nodo-grafo.actual .nodo-grafo-punto {
+    background: var(--c-accent-cyan);
+    box-shadow: 0 0 10px rgba(0, 212, 255, 0.65);
+}
+
+.nodo-grafo.conectado .nodo-grafo-punto {
+    background: var(--c-accent-green);
+    box-shadow: 0 0 10px rgba(0, 255, 157, 0.5);
+}
+
+.nodo-grafo-texto {
+    font-family: var(--font-mono);
+    font-size: 0.54rem;
+    letter-spacing: 0.8px;
+    color: var(--c-text-secondary);
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.mapa-ruta-info {
+    margin-bottom: 14px;
+    padding: 10px 12px;
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(123, 165, 200, 0.22);
+    background: rgba(7, 16, 26, 0.55);
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.8px;
+    color: var(--c-text-secondary);
+}
+
+.mapa-ruta-info .ruta-posible {
+    color: var(--c-accent-green);
+}
+
+.mapa-ruta-info .ruta-sugerida {
+    color: var(--c-accent-red);
 }
 
 .modules-grid {
@@ -1216,7 +1324,7 @@ body {
     background: var(--c-bg-panel);
     border: 1px solid var(--c-accent-green);
     border-radius: var(--radius-xl);
-    padding: 40px;
+    padding: 40px 34px 32px;
     text-align: center;
     max-width: 480px;
     box-shadow: 0 0 60px rgba(0, 255, 157, 0.15);
@@ -1237,4 +1345,167 @@ body {
     font-size: 1rem;
     color: var(--c-text-secondary);
     line-height: 1.5;
+}
+
+.victory-actions {
+    margin-top: 24px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+}
+
+.victory-btn {
+    min-width: 150px;
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    border: 1px solid transparent;
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: transform 0.2s, background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.victory-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+}
+
+.victory-btn.primary {
+    background: rgba(0, 255, 157, 0.12);
+    border-color: rgba(0, 255, 157, 0.32);
+    color: var(--c-accent-green);
+}
+
+.victory-btn.secondary {
+    background: rgba(0, 212, 255, 0.08);
+    border-color: rgba(0, 212, 255, 0.26);
+    color: var(--c-accent-cyan);
+}
+
+.victory-btn.ghost {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: var(--c-text-primary);
+}
+
+.victory-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.victory-history-panel {
+    position: absolute;
+    right: 24px;
+    bottom: 24px;
+    width: min(420px, calc(100vw - 48px));
+    max-height: min(60vh, 520px);
+    display: flex;
+    flex-direction: column;
+    background: rgba(11, 17, 32, 0.98);
+    border: 1px solid rgba(0, 212, 255, 0.24);
+    border-radius: var(--radius-xl);
+    box-shadow: 0 0 40px rgba(0, 212, 255, 0.12);
+    overflow: hidden;
+}
+
+.victory-history-header {
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-family: var(--font-display);
+    font-size: 0.8rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--c-accent-cyan);
+    border-bottom: 1px solid rgba(0, 212, 255, 0.16);
+}
+
+.victory-history-close {
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--c-text-secondary);
+    font-family: var(--font-mono);
+    font-size: 0.64rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.victory-history-summary {
+    padding: 12px 16px 0;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 1px;
+    color: var(--c-text-secondary);
+}
+
+.victory-history-list {
+    padding: 14px 16px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow: auto;
+}
+
+.victory-history-item {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: var(--c-bg-card);
+    border: 1px solid rgba(0, 212, 255, 0.12);
+    border-radius: var(--radius-md);
+}
+
+.victory-history-main,
+.victory-history-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.victory-history-name {
+    font-family: var(--font-display);
+    font-size: 0.8rem;
+    color: #fff;
+    letter-spacing: 1px;
+}
+
+.victory-history-id,
+.victory-history-file,
+.victory-history-empty {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--c-text-secondary);
+}
+
+.victory-history-state {
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.victory-history-state.pendiente {
+    color: var(--c-accent-amber);
+    background: rgba(255, 184, 0, 0.1);
+}
+
+.victory-history-state.finalizada {
+    color: var(--c-accent-green);
+    background: rgba(0, 255, 157, 0.1);
+}
+
+.victory-history-empty {
+    padding: 12px 4px 4px;
+    text-align: center;
 }

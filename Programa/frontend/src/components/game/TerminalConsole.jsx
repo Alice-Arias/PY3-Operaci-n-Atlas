@@ -10,6 +10,35 @@ function clasificarMensaje(texto) {
     return 'sistema';
 }
 
+function embellecerTexto(texto) {
+    if (!texto || typeof texto !== 'string') return texto;
+
+    const limpio = texto.trim();
+
+    if (/^Sistemas pendientes:\s*\[\s*\]$/i.test(limpio)) {
+        return 'No quedan sistemas pendientes.';
+    }
+
+    if (/^Tripulantes pendientes:\s*\[\s*\]$/i.test(limpio)) {
+        return 'No quedan tripulantes pendientes.';
+    }
+
+    const listaCoincidencia = limpio.match(/^(Sistemas pendientes|Tripulantes pendientes|Movimientos posibles desde [^:]+):\s*\[(.*)\]$/i);
+    if (listaCoincidencia) {
+        const etiqueta = listaCoincidencia[1];
+        const contenido = listaCoincidencia[2].trim();
+        if (!contenido) return `${etiqueta}: ninguno.`;
+        const items = contenido.split(',').map((item) => item.trim()).filter(Boolean);
+        const textoLegible = items.map((item) => item.replace(/_/g, ' ')).join(', ');
+        return `${etiqueta}: ${textoLegible}`;
+    }
+
+    return limpio
+        .replace(/\b([a-z]+_[a-z0-9_]+)\b/gi, (token) => token.replace(/_/g, ' '))
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
 function getTagLabel(tipo) {
     const tags = {
         sistema:    'SISTEMA',
@@ -42,7 +71,7 @@ function TerminalConsole({ log, onAyuda, disabled, errorActual, onDismissError }
             id: Date.now() + Math.random(),
             timestamp: now(),
             tipo: clasificarMensaje(parte),
-            texto: parte.trim(),
+            texto: embellecerTexto(parte),
         }));
         setLineas(prev => {
             // parta que no se dupliquen mensajes iniciales
