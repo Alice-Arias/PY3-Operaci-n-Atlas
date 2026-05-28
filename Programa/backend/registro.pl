@@ -110,17 +110,6 @@ iniciar_partida(NombreJugador) :-
     assertz(jugador_nombre(NombreJugador)),
     assertz(partida_actual(IdPartida)),
 
-    partida_archivo(NombreJugador, IdPartida, Archivo),
-
-    registrar_partida(
-        NombreJugador,
-        IdPartida,
-        Archivo,
-        pendiente
-    ),
-
-    guardar_partida,
-
     format(
         "Partida iniciada para ~w con id ~w.~n",
         [NombreJugador, IdPartida]

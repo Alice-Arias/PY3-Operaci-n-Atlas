@@ -3,8 +3,21 @@ import { parsearConexionesProlog, parsearEstadoProlog, parsearRegistroProlog, pa
 const BASE_URL = 'http://localhost:3000/api';
 
 async function manejarRespuesta(res) {
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Error del servidor');
+    const contentType = res.headers.get('content-type') || '';
+
+    let data = null;
+    if (contentType.includes('application/json')) {
+        data = await res.json();
+    } else {
+        const texto = await res.text();
+        data = { raw: texto };
+    }
+
+    if (!res.ok) {
+        const mensajeServidor = data?.error || data?.raw || 'Error del servidor';
+        throw new Error(mensajeServidor);
+    }
+
     return data;
 }
 
@@ -119,5 +132,11 @@ export const apiService = {
             ...data,
             estado: data.estado ? parsearEstadoProlog(data.estado) : null
         };
+    },
+
+    forzarGane: async () => {
+        const res = await fetch(`${BASE_URL}/forzar_gane`, { method: 'POST' });
+        const data = await manejarRespuesta(res);
+        return data;
     }
 };

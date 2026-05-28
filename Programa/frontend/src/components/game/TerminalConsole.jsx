@@ -13,7 +13,7 @@ function clasificarMensaje(texto) {
 function embellecerTexto(texto) {
     if (!texto || typeof texto !== 'string') return texto;
 
-    const limpio = texto.trim();
+    const limpio = texto.trim().replace(/^ERROR\s*[:-]?\s*/i, '').trim();
 
     if (/^Sistemas pendientes:\s*\[\s*\]$/i.test(limpio)) {
         return 'No quedan sistemas pendientes.';
@@ -117,7 +117,7 @@ function TerminalConsole({ log, onAyuda, disabled, errorActual, onDismissError }
                 <div className="error-box">
                     <span className="error-box-icon">⊗</span>
                     <div className="error-box-content">
-                        <div className="error-box-title">Error</div>
+                        <div className="error-box-title">ERROR</div>
                         <div className="error-box-msg">{errorActual}</div>
                         <button className="error-box-dismiss" onClick={onDismissError}>
                             Entendido

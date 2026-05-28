@@ -10,65 +10,63 @@ function enviarError(respuestaHttp, mensajeError) {
     respuestaHttp.status(500).json({ error: mensajeLimpio });
 }
 
+function formatearError(mensaje) {
+    const limpio = (mensaje || '').toString().trim().replace(/^ERROR\s*[:-]?\s*/i, '').trim();
+    if (!limpio) {
+        return 'ERROR - No se pudo completar la accion. Verifica los requisitos e intenta de nuevo.';
+    }
+    return `ERROR - ${limpio}`;
+}
+
 function limpiarMensajeErrorProlog(mensajeError) {
     const textoBase = (mensajeError || '').toString().trim();
     if (!textoBase) {
-        return 'No se pudo completar la accion. Verifica los requisitos e intenta de nuevo.';
+        return formatearError('No se pudo completar la accion. Verifica los requisitos e intenta de nuevo.');
     }
 
-    const lineasUtiles = Array.from(new Set(
-        textoBase
-            .split(/\r?\n/)
-            .map((linea) => linea.trim())
-            .filter((linea) => linea.length > 0)
-            .filter((linea) => !/^Warning:/i.test(linea))
-            .filter((linea) => !/Previously defined at/i.test(linea))
-            .filter((linea) => !/^[A-Za-z]:\//.test(linea))
-    ));
+    const lineasUtiles = textoBase
+        .split(/\r?\n/)
+        .map((linea) => linea.trim())
+        .filter((linea) => linea.length > 0)
+        .filter((linea) => !/^Warning:/i.test(linea))
+        .filter((linea) => !/Previously defined at/i.test(linea))
+        .filter((linea) => !/^[A-Za-z]:\//.test(linea));
 
     const textoFiltrado = lineasUtiles.join(' ');
 
-    const mensajeBase = 'La accion no pudo completarse.';
-
-    const lineasExplicativas = lineasUtiles.filter((linea) => /^(No puedes|Debes|Te falta|Te faltan|No cumples|Faltan|No hay una conexion directa|No puedes rescatar|No puedes acceder|Tienes que|No se encontro una accion valida|Okey)/i.test(linea));
-    if (lineasExplicativas.length > 0) {
-        return lineasExplicativas
-            .map((linea) => linea.replace(/^[-•\s]+/, '').trim())
-            .filter(Boolean)
-            .join(' ');
-    }
-
-    if (!textoFiltrado || /halt|Execution Aborted/i.test(textoFiltrado)) {
-        return `${mensajeBase} Verifica los requisitos de la mision.`;
-    }
-
     if (/existence_error|Undefined procedure/i.test(textoFiltrado)) {
-        return 'No se encontro una accion valida en el motor del juego. Intenta otra accion.';
+        return formatearError('No se encontro una accion valida en el motor del juego. Intenta otra accion.');
     }
 
     if (/type_error|syntax_error/i.test(textoFiltrado)) {
-        return 'La accion tiene un formato invalido. Revisa los datos ingresados.';
+        return formatearError('La accion tiene un formato invalido. Revisa los datos ingresados.');
+    }
+
+    const explicativas = lineasUtiles.filter((linea) =>
+        /^(No puedes|Debes|Okey, no puedes|No se|ERROR|Te falta|Te faltan|Faltan requisitos|No cumples)/i.test(linea)
+    );
+
+    if (explicativas.length > 0) {
+        return formatearError(explicativas.join(' '));
+    }
+
+    if (!textoFiltrado || /halt|Execution Aborted/i.test(textoFiltrado)) {
+        return formatearError('La accion no pudo completarse. Verifica que cumples los requisitos de la mision.');
     }
 
     const coincidencia = textoFiltrado.match(/ERROR:[^\n]+/i);
     if (coincidencia) {
-        return coincidencia[0].replace(/\s+/g, ' ').trim();
-    }
-
-    // Priorizar líneas explicativas (evitar mostrar mensajes genéricos mezclados)
-    const explicativas = lineasUtiles.filter(l => /^(No puedes|Debes|Okey|No se|ERROR|Te falta|Te faltan|No cumples|Faltan|No puedes rescatar|No puedes acceder|No hay una conexion directa|Tienes que)/i.test(l));
-    if (explicativas.length > 0) {
-        return explicativas.join(' ');
+        return formatearError(coincidencia[0].replace(/\s+/g, ' ').trim());
     }
 
     // Si no hay líneas prioritarias, devolver la última línea útil para ser más conciso
-    if (lineasUtiles.length > 0) return lineasUtiles[lineasUtiles.length - 1];
+    if (lineasUtiles.length > 0) return formatearError(lineasUtiles[lineasUtiles.length - 1]);
 
     if (textoFiltrado.length > 260) {
-        return mensajeBase + ' Revisa la razon detallada en la consola.';
+        return formatearError('Se produjo un error al ejecutar la accion en Prolog.');
     }
 
-    return textoFiltrado || `${mensajeBase} Revisa la razon detallada en la consola.`;
+    return formatearError(textoFiltrado);
 }
 
 function convertirSalida(textoSalida) {
@@ -112,11 +110,39 @@ function ejecutarConsultaLista(meta, respuestaHttp) {
     });
 }
 
+function ejecutarAyuda(respuestaHttp) {
+    const salida = correrProlog('ayuda_ui');
+
+    if (salida.ok) {
+        return enviarBien(respuestaHttp, { out: salida.out });
+    }
+
+    const mensajeAyuda = limpiarMensajeErrorProlog(salida.err);
+    return enviarBien(respuestaHttp, {
+        out: mensajeAyuda || 'ERROR - No se pudo generar la ayuda en este momento.'
+    });
+}
+
+function ejecutarForzarGane(respuestaHttp) {
+    const salida = correrProlog('forzar_gane_ui');
+
+    if (salida.ok) {
+        return enviarBien(respuestaHttp, { out: salida.out });
+    }
+
+    const mensaje = limpiarMensajeErrorProlog(salida.err);
+    return enviarBien(respuestaHttp, {
+        out: mensaje || 'ERROR - No se pudo evaluar si la partida tiene solucion.'
+    });
+}
+
 module.exports = {
     enviarBien,
     enviarError,
     ejecutarAccion,
     ejecutarConsultaLista,
+    ejecutarAyuda,
+    ejecutarForzarGane,
     obtenerEstadoJuego
 };
 

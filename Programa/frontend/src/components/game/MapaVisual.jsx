@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import atlasBackground from '../../assets/Fondo2.png';
 
 // Iconos para representar los modulos
@@ -118,41 +118,6 @@ function construirConexionesDeRespaldo(moduloActual, conectados) {
     return conectados.map((destino) => ({ origen: moduloActual, destino }));
 }
 
-function buscarRutasAlternativas(origen, destino, conexiones, limite = 3) {
-    if (!origen || !destino) return [];
-    if (origen === destino) return [[origen]];
-
-    const grafo = construirGrafoBidireccional(conexiones);
-    const rutas = [];
-
-    const dfs = (actual, camino, visitados) => {
-        if (rutas.length >= limite) return;
-        if (actual === destino) {
-            rutas.push([...camino]);
-            return;
-        }
-
-        const vecinos = Array.from(grafo.get(actual) || []);
-        vecinos.sort((a, b) => a.localeCompare(b));
-
-        for (const vecino of vecinos) {
-            if (visitados.has(vecino)) continue;
-            visitados.add(vecino);
-            camino.push(vecino);
-            dfs(vecino, camino, visitados);
-            camino.pop();
-            visitados.delete(vecino);
-            if (rutas.length >= limite) return;
-        }
-    };
-
-    dfs(origen, [origen], new Set([origen]));
-
-    return rutas
-        .sort((a, b) => a.length - b.length || a.join('>').localeCompare(b.join('>')))
-        .slice(0, limite);
-}
-
 function crearSetAristasDesdeRuta(ruta) {
     const setAristas = new Set();
     for (let i = 0; i < ruta.length - 1; i += 1) {
@@ -164,21 +129,69 @@ function crearSetAristasDesdeRuta(ruta) {
     return setAristas;
 }
 
-function MapaVisual({ modulos, conexiones, estado, descripcionesModulos = {} }) {
+function obtenerRutasAlternativas(origen, destino, conexiones, limite = 3) {
+    if (!origen || !destino || origen === destino) return [];
+
+    const grafo = construirGrafoBidireccional(conexiones);
+    if (!grafo.has(origen) || !grafo.has(destino)) return [];
+
+    const rutas = [];
+    const caminoActual = [origen];
+    const visitados = new Set([origen]);
+    const profundidadMaxima = Math.max(grafo.size, 1);
+
+    const explorar = (actual) => {
+        if (rutas.length >= limite || caminoActual.length > profundidadMaxima + 1) return;
+
+        const vecinos = [...(grafo.get(actual) || [])].sort();
+        for (const vecino of vecinos) {
+            if (visitados.has(vecino)) continue;
+
+            caminoActual.push(vecino);
+            visitados.add(vecino);
+
+            if (vecino === destino) {
+                rutas.push([...caminoActual]);
+            } else {
+                explorar(vecino);
+            }
+
+            caminoActual.pop();
+            visitados.delete(vecino);
+
+            if (rutas.length >= limite) return;
+        }
+    };
+
+    explorar(origen);
+
+    return rutas
+        .sort((rutaA, rutaB) => rutaA.length - rutaB.length || rutaA.join('|').localeCompare(rutaB.join('|')))
+        .slice(0, limite);
+}
+
+function MapaVisual({
+    modulos,
+    conexiones,
+    estado,
+    descripcionesModulos = {},
+    mostrarFichaModulo = true,
+    onFichaModuloChange,
+}) {
     const listaModulos = useMemo(() => (Array.isArray(modulos) ? modulos : []), [modulos]);
     const listaConexiones = useMemo(() => (Array.isArray(conexiones) ? conexiones : []), [conexiones]);
-    const conectados   = useMemo(() => (Array.isArray(estado?.modulosConectados) ? estado.modulosConectados : []), [estado]);
-    const visitados    = Array.isArray(estado?.visitados) ? estado.visitados : [];
+    const conectados = useMemo(() => (Array.isArray(estado?.modulosConectados) ? estado.modulosConectados : []), [estado]);
+    const visitados = Array.isArray(estado?.visitados) ? estado.visitados : [];
     const moduloActual = estado?.moduloActual || '';
-    const sistemas     = useMemo(() => (Array.isArray(estado?.sistemas) ? estado.sistemas : []), [estado]);
-    const tripulantes  = Array.isArray(estado?.tripulantes) ? estado.tripulantes : [];
+    const sistemas = useMemo(() => (Array.isArray(estado?.sistemas) ? estado.sistemas : []), [estado]);
+    const tripulantes = Array.isArray(estado?.tripulantes) ? estado.tripulantes : [];
     const artefactosDisponibles = Array.isArray(estado?.artefactosDisponibles) ? estado.artefactosDisponibles : [];
     const [moduloSeleccionado, setModuloSeleccionado] = useState('');
 
     //estado visual de cada módulo------------------------------------------------------------------------------------
     const statusModulo = useMemo(() => {
         const map = {};
-        listaModulos.forEach(m => {
+        listaModulos.forEach((m) => {
             const sistemasFallados = sistemas.filter(s => s.modulo === m && s.estado === 'fallo');
             const sistemasReparando = sistemas.filter(s => s.modulo === m && s.estado === 'reparando');
             if (sistemasReparando.length > 0) map[m] = 'reparando';
@@ -202,6 +215,11 @@ function MapaVisual({ modulos, conexiones, estado, descripcionesModulos = {} }) 
     const tripulantesEnModulo = (modulo) =>
         tripulantes.filter(t => t.modulo === modulo && t.estado === 'atrapado');
 
+    const tieneAccionPendiente = (modulo) => {
+        const estado = statusModulo[modulo] || 'operativo';
+        return estado === 'fallo' || estado === 'reparando' || tripulantesEnModulo(modulo).length > 0;
+    };
+
     const cols = listaModulos.length <= 4 ? listaModulos.length : listaModulos.length <= 6 ? 3 : 4;
 
     const conexionesParaGrafo = useMemo(() => {
@@ -210,18 +228,51 @@ function MapaVisual({ modulos, conexiones, estado, descripcionesModulos = {} }) 
         return construirConexionesDeRespaldo(moduloActual, conectados);
     }, [listaConexiones, moduloActual, conectados]);
 
-    const rutasSugeridas = useMemo(() => {
+    const rutaSugerida = useMemo(() => {
         if (!moduloSeleccionado || !moduloActual) return [];
-        return buscarRutasAlternativas(moduloActual, moduloSeleccionado, conexionesParaGrafo, 3);
+        return buscarRutaMasCorta(moduloActual, moduloSeleccionado, conexionesParaGrafo);
     }, [moduloActual, moduloSeleccionado, conexionesParaGrafo]);
 
-    const rutaSugerida = rutasSugeridas[0] || [];
+    const rutasPosibles = useMemo(() => {
+        if (!moduloSeleccionado || !moduloActual) return [];
+        if (moduloSeleccionado === moduloActual) return [];
+        return obtenerRutasAlternativas(moduloActual, moduloSeleccionado, conexionesParaGrafo, 3);
+    }, [moduloActual, moduloSeleccionado, conexionesParaGrafo]);
+
     const aristasRuta = useMemo(() => crearSetAristasDesdeRuta(rutaSugerida), [rutaSugerida]);
 
     const destinoEsDirecto = moduloSeleccionado && conectados.includes(moduloSeleccionado);
     const descripcionModuloSeleccionado = moduloSeleccionado
         ? (descripcionesModulos[moduloSeleccionado] || 'Sin descripcion disponible para este modulo.')
         : '';
+    const artefactosModuloSeleccionado = moduloSeleccionado ? artefactosEnModulo(moduloSeleccionado) : [];
+    const tripulantesModuloSeleccionado = moduloSeleccionado ? tripulantesEnModulo(moduloSeleccionado) : [];
+    const moduloSeleccionadoEsActual = moduloSeleccionado && moduloSeleccionado === moduloActual;
+    const fichaModuloSeleccionado = useMemo(() => {
+        if (!moduloSeleccionado) return null;
+
+        return {
+            modulo: moduloSeleccionado,
+            moduloActual,
+            esActual: moduloSeleccionadoEsActual,
+            descripcion: descripcionModuloSeleccionado,
+            artefactos: artefactosModuloSeleccionado,
+            tripulantes: tripulantesModuloSeleccionado,
+            rutasPosibles,
+        };
+    }, [moduloSeleccionado, moduloActual, moduloSeleccionadoEsActual, descripcionModuloSeleccionado, artefactosModuloSeleccionado, tripulantesModuloSeleccionado, rutasPosibles]);
+
+    useEffect(() => {
+        if (typeof onFichaModuloChange !== 'function') return;
+        onFichaModuloChange(fichaModuloSeleccionado);
+    }, [onFichaModuloChange, fichaModuloSeleccionado]);
+
+    useEffect(() => {
+        if (!moduloActual) return;
+        if (!moduloSeleccionado) {
+            setModuloSeleccionado(moduloActual);
+        }
+    }, [moduloActual, moduloSeleccionado]);
 
     const layoutGrafo = useMemo(() => {
         const total = listaModulos.length;
@@ -251,7 +302,7 @@ function MapaVisual({ modulos, conexiones, estado, descripcionesModulos = {} }) 
                     y1: desde.y,
                     x2: hacia.x,
                     y2: hacia.y,
-                    activa
+                    activa,
                 };
             })
             .filter(Boolean);
@@ -275,12 +326,12 @@ function MapaVisual({ modulos, conexiones, estado, descripcionesModulos = {} }) 
                     <span className="legend-item">
                         <span className="legend-dot amber" />En reparación
                     </span>
-                        <span className="legend-item">
-                            <span className="legend-dot cyan" />Módulo actual
-                        </span>
-                        <span className="legend-item">
-                            <span className="legend-dot gray" />Sin acceso directo
-                        </span>
+                    <span className="legend-item">
+                        <span className="legend-dot cyan" />Módulo actual
+                    </span>
+                    <span className="legend-item">
+                        <span className="legend-dot gray" />Sin acceso directo
+                    </span>
                 </div>
             </div>
 
@@ -325,7 +376,19 @@ function MapaVisual({ modulos, conexiones, estado, descripcionesModulos = {} }) 
                         {layoutGrafo.posiciones.map((nodo) => {
                             const esActual = nodo.modulo === moduloActual;
                             const esConectado = conectados.includes(nodo.modulo);
-                            const claseNodo = esActual ? 'nodo-grafo actual' : esConectado ? 'nodo-grafo conectado' : 'nodo-grafo';
+                            const estadoNodo = statusModulo[nodo.modulo] || 'operativo';
+                            const haySeleccion = Boolean(moduloSeleccionado);
+                            const esInaccesible = haySeleccion && nodo.modulo !== moduloSeleccionado && !esActual && !esConectado;
+                            const esAccionable = haySeleccion && !esActual && esConectado && tieneAccionPendiente(nodo.modulo);
+                            let claseNodo = `nodo-grafo ${estadoNodo}`;
+
+                            if (esActual) {
+                                claseNodo = 'nodo-grafo actual';
+                            } else if (esInaccesible) {
+                                claseNodo = 'nodo-grafo inaccesible';
+                            } else if (esAccionable) {
+                                claseNodo = 'nodo-grafo accionable';
+                            }
 
                             return (
                                 <div
@@ -343,32 +406,77 @@ function MapaVisual({ modulos, conexiones, estado, descripcionesModulos = {} }) 
                     </div>
                 )}
 
-                {moduloSeleccionado && (
+                {mostrarFichaModulo && moduloSeleccionado && (
                     <div className="mapa-ruta-info">
-                        <div className="mapa-ruta-row">
-                            <span className="ruta-etiqueta ruta-destino">Destino</span>
-                            <strong className="ruta-valor ruta-valor-destino">{formatNombre(moduloSeleccionado)}</strong>
+                        <div className="mapa-ruta-hero">
+                            <span className="mapa-ruta-kicker">Ficha del módulo</span>
+                            <span className="mapa-ruta-nombre">
+                                {moduloSeleccionadoEsActual ? 'Módulo actual' : 'Destino'} · {formatNombre(moduloSeleccionado)}
+                            </span>
                         </div>
-                        <div className="ruta-descripcion">
-                            <span className="ruta-etiqueta ruta-info">Descripción</span>
-                            <span className="ruta-texto-descripcion">{descripcionModuloSeleccionado}</span>
+
+                        <span className="ruta-descripcion">{descripcionModuloSeleccionado}</span>
+
+                        <div className="mapa-ruta-stats" aria-label="Resumen del módulo">
+                            <span className="mapa-ruta-stat">
+                                <strong>{artefactosModuloSeleccionado.length}</strong>
+                                <small>Artefactos</small>
+                            </span>
+                            <span className="mapa-ruta-stat">
+                                <strong>{tripulantesModuloSeleccionado.length}</strong>
+                                <small>Atrapados</small>
+                            </span>
+                            <span className="mapa-ruta-stat">
+                                <strong>{rutasPosibles.length}</strong>
+                                <small>Rutas</small>
+                            </span>
                         </div>
-                        {moduloSeleccionado === moduloActual && (
-                            <span className="ruta-nota ruta-nota-cyan">Ya estás en este módulo.</span>
-                        )}
-                        {moduloSeleccionado !== moduloActual && rutasSugeridas.length > 0 && (
-                            <div className="ruta-lista">
-                                {rutasSugeridas.map((ruta, indice) => (
-                                    <div key={`${ruta.join('|')}-${indice}`} className="ruta-opcion">
-                                        <span className="ruta-etiqueta ruta-sugerida-label">Ruta {indice + 1}</span>
-                                        <span className="ruta-camino ruta-camino-sugerida">{ruta.map(formatNombre).join(' -> ')}</span>
-                                    </div>
-                                ))}
+
+                        <div className="mapa-ruta-bloque">
+                            <span className="mapa-ruta-bloque-titulo">Artefactos</span>
+                            {artefactosModuloSeleccionado.length > 0 ? (
+                                <ul className="mapa-ruta-lista">
+                                    {artefactosModuloSeleccionado.map((artefacto) => (
+                                        <li key={artefacto}>{formatNombre(artefacto)}</li>
+                                    ))}
+                                </ul>
+                            ) : (
+                                <span className="mapa-ruta-vacio">No hay artefactos en este módulo.</span>
+                            )}
+                        </div>
+
+                        <div className="mapa-ruta-bloque">
+                            <span className="mapa-ruta-bloque-titulo">Tripulación atrapada</span>
+                            {tripulantesModuloSeleccionado.length > 0 ? (
+                                <ul className="mapa-ruta-lista">
+                                    {tripulantesModuloSeleccionado.map((tripulante, indice) => (
+                                        <li key={`${tripulante.nombre || tripulante.tripulante || 'tripulante'}-${indice}`}>
+                                            {formatNombre(tripulante.nombre || tripulante.tripulante || 'Tripulante')}
+                                        </li>
+                                    ))}
+                                </ul>
+                            ) : (
+                                <span className="mapa-ruta-vacio">No hay tripulantes atrapados aquí.</span>
+                            )}
+                        </div>
+
+                        {moduloSeleccionadoEsActual ? (
+                            <span className="ruta-posible">Estás en este módulo.</span>
+                        ) : rutasPosibles.length > 0 ? (
+                            <div className="mapa-ruta-bloque">
+                                <span className="mapa-ruta-bloque-titulo">Rutas posibles</span>
+                                <ol className="mapa-ruta-lista mapa-ruta-lista-rutas">
+                                    {rutasPosibles.map((ruta, indice) => (
+                                        <li key={`${ruta.join('|')}-${indice}`} className={`mapa-ruta-item ${indice === 0 ? 'ruta-posible' : 'ruta-sugerida'}`}>
+                                            <span className="mapa-ruta-idx">{indice + 1}</span>
+                                            {ruta.map(formatNombre).join(' -> ')}
+                                        </li>
+                                    ))}
+                                </ol>
                             </div>
-                        )}
-                        {moduloSeleccionado !== moduloActual && rutasSugeridas.length === 0 && conexionesParaGrafo.length > 0 && !destinoEsDirecto && (
-                            <span className="ruta-nota ruta-nota-roja">Ese módulo no tiene acceso directo desde tu posición actual.</span>
-                        )}
+                        ) : moduloSeleccionado !== moduloActual && conexionesParaGrafo.length > 0 ? (
+                            <span className="ruta-sugerida">No se encontraron rutas desde tu posición actual.</span>
+                        ) : null}
                     </div>
                 )}
 
@@ -385,6 +493,8 @@ function MapaVisual({ modulos, conexiones, estado, descripcionesModulos = {} }) 
                             const status = statusModulo[modulo] || 'operativo';
                             const esActual = modulo === moduloActual;
                             const esConectado = conectados.includes(modulo);
+                            const esAccionable = esConectado && tieneAccionPendiente(modulo);
+                            const esSinAcceso = !esActual && !esConectado;
                             const esVisitado = visitados.includes(modulo);
                             const meta = getMeta(modulo);
                             const arts = artefactosEnModulo(modulo);
@@ -392,7 +502,9 @@ function MapaVisual({ modulos, conexiones, estado, descripcionesModulos = {} }) 
 
                             let clases = `module-card status-${status}`;
                             if (esActual) clases += ' es-actual';
+                            else if (esAccionable) clases += ' es-accionable';
                             else if (esConectado) clases += ' es-conectado';
+                            else if (esSinAcceso) clases += ' es-noacceso';
                             else if (esVisitado) clases += ' es-visitado';
 
                             return (

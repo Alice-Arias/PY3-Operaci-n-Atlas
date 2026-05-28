@@ -89,14 +89,6 @@ iniciar_partida_ui(NombreJugador) :-
     retractall(partida_actual(_)),
     assertz(jugador_nombre(NombreJugador)),
     assertz(partida_actual(IdPartida)),
-    partida_archivo(NombreJugador, IdPartida, Archivo),
-
-    registrar_partida(
-        NombreJugador,
-        IdPartida,
-        Archivo,
-        pendiente
-    ),
     guardar_estado_en_disco,
     format(
         "Partida iniciada para ~w con id ~w.",
@@ -156,6 +148,12 @@ cargar_partida_ui(IdPartida) :-
 ayuda_ui :-
     restaurar_estado_desde_disco,
     como_gano.
+% -----------------------------------------------------------------------------
+% FORZAR GANE / DETECTAR SOLUCION
+% -----------------------------------------------------------------------------
+forzar_gane_ui :-
+    restaurar_estado_desde_disco,
+    forzar_gane.
 % -----------------------------------------------------------------------------
 % VERIFICAR VICTORIA
 % -----------------------------------------------------------------------------

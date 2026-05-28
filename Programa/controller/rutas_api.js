@@ -4,7 +4,9 @@ const {
     enviarBien,
     enviarError,
     ejecutarAccion,
-    ejecutarConsultaLista
+    ejecutarConsultaLista,
+    ejecutarAyuda,
+    ejecutarForzarGane
 } = require('./servicio_prolog_api');
 
 const router = express.Router();
@@ -114,7 +116,11 @@ router.post('/cargar', (req, res) => {
 });
 
 router.post('/ayuda', (req, res) => {
-    ejecutarAccion('ayuda_ui', res);
+    ejecutarAyuda(res);
+});
+
+router.post('/forzar_gane', (req, res) => {
+    ejecutarForzarGane(res);
 });
 
 router.post('/verificar', (req, res) => {

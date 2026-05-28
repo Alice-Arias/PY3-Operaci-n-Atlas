@@ -10,6 +10,28 @@ tomar(Artefacto) :-
     assertz(tomado(Artefacto)),
     format("Tomaste ~w.~n", [Artefacto]).
 
+tomar(Artefacto) :-
+    jugador(ModuloActual),
+    artefacto(Artefacto, OtroModulo),
+    OtroModulo \= ModuloActual,
+    formatear_identificador_legible(Artefacto, ArtefactoLegible),
+    format("No puedes tomar ~w desde ~w porque esta en ~w.~n", [ArtefactoLegible, ModuloActual, OtroModulo]),
+    !,
+    fail.
+
+tomar(Artefacto) :-
+    tomado(Artefacto),
+    formatear_identificador_legible(Artefacto, ArtefactoLegible),
+    format("No puedes tomar ~w porque ya lo tienes en tu inventario.~n", [ArtefactoLegible]),
+    !,
+    fail.
+
+tomar(Artefacto) :-
+    formatear_identificador_legible(Artefacto, ArtefactoLegible),
+    format("No puedes tomar ~w porque no esta disponible en este momento.~n", [ArtefactoLegible]),
+    !,
+    fail.
+
 usar(Artefacto) :-
     posee_artefacto(Artefacto),
     \+ usado(Artefacto),
@@ -41,6 +63,40 @@ reparar(Sistema) :-
     assertz(sistema(ModuloActual, Sistema, Requeridos, restaurado)),
     format("Sistema ~w reparado en ~w.~n", [Sistema, ModuloActual]).
 
+reparar(Sistema) :-
+    jugador(ModuloActual),
+    sistema(ModuloActual, Sistema, _, restaurado),
+    formatear_identificador_legible(Sistema, SistemaLegible),
+    format("No puedes reparar ~w porque ya esta restaurado en ~w.~n", [SistemaLegible, ModuloActual]),
+    !,
+    fail.
+
+reparar(Sistema) :-
+    jugador(ModuloActual),
+    sistema(ModuloActual, Sistema, Requeridos, fallo),
+    \+ requerimientos_cumplidos(Requeridos, posee_artefacto),
+    requisitos_faltantes_rescate(Requeridos, Faltantes),
+    formatear_identificador_legible(Sistema, SistemaLegible),
+    mostrar_requisitos_faltantes(Faltantes),
+    format("No puedes reparar ~w todavia en ~w porque te faltan requisitos para restaurarlo.~n", [SistemaLegible, ModuloActual]),
+    !,
+    fail.
+
+reparar(Sistema) :-
+    jugador(ModuloActual),
+    sistema(OtroModulo, Sistema, _, _),
+    OtroModulo \= ModuloActual,
+    formatear_identificador_legible(Sistema, SistemaLegible),
+    format("No puedes reparar ~w desde ~w porque esta en ~w.~n", [SistemaLegible, ModuloActual, OtroModulo]),
+    !,
+    fail.
+
+reparar(Sistema) :-
+    formatear_identificador_legible(Sistema, SistemaLegible),
+    format("No puedes reparar ~w porque no existe o no esta disponible ahora.~n", [SistemaLegible]),
+    !,
+    fail.
+
 requisito_rescate_cumplido(Requisito) :- sistema_restaurado(Requisito), !.
 requisito_rescate_cumplido(Requisito) :- posee_artefacto(Requisito).
 
@@ -56,14 +112,12 @@ requisitos_faltantes_rescate([Requisito | Resto], Faltantes) :-
 mostrar_requisitos_faltantes([]) :- writeln("No cumples con los requisitos necesarios para rescatar a ese tripulante.").
 mostrar_requisitos_faltantes(Faltantes) :-
     % Separar requisitos que son servicios (sistemas) de artefactos
-    findall(S, (member(S, Faltantes), sistema(_, S, _, _)), ServiciosSinOrden),
-    findall(A, (member(A, Faltantes), \+ sistema(_, A, _, _)), ArtefactosSinOrden),
-    sort(ServiciosSinOrden, Servicios),
-    sort(ArtefactosSinOrden, Artefactos),
+    findall(S, (member(S, Faltantes), sistema(_, S, _, _)), Servicios),
+    findall(A, (member(A, Faltantes), \+ sistema(_, A, _, _)), Artefactos),
     formatear_lista_legible(Artefactos, TextoArtefactos),
     formatear_lista_legible(Servicios, TextoServicios),
-    ( Artefactos \= [] -> format("Tienes que conseguir: ~w.~n", [TextoArtefactos]) ; true ),
-    ( Servicios \= [] -> format("Tienes que reparar: ~w.~n", [TextoServicios]) ; true ),
+    ( Artefactos \= [] -> format("Debes conseguir: ~w.~n", [TextoArtefactos]) ; true ),
+    ( Servicios \= [] -> format("Debes reparar: ~w.~n", [TextoServicios]) ; true ),
     ( Artefactos = [] , Servicios = [] -> writeln("Faltan requisitos no especificados.") ; true ).
 
 rescatar(Tripulante) :-
@@ -75,7 +129,7 @@ rescatar(Tripulante) :-
         format("Rescataste a ~w.~n", [Tripulante])
     ;   requisitos_faltantes_rescate(Requeridos, Faltantes),
         formatear_identificador_legible(Tripulante, TripLegible),
-        format("No puedes rescatar a ~w todavía. Tienes que completar esto:\n", [TripLegible]),
+        format("No puedes rescatar a ~w todavía. Para poder rescatarlo necesitas:\n", [TripLegible]),
         mostrar_requisitos_faltantes(Faltantes),
         !,
         fail
@@ -85,13 +139,11 @@ rescatar(Tripulante) :-
     jugador(ModuloActual),
     tripulante(Tripulante, OtroModulo, _, atrapado),
     OtroModulo \= ModuloActual,
-    formatear_identificador_legible(Tripulante, TripLegible),
-    formatear_identificador_legible(OtroModulo, ModuloLegible),
-    format("No puedes rescatar a ~w desde ~w porque esta en ~w. Tienes que ir a ~w para poder rescatarlo.~n", [TripLegible, ModuloActual, ModuloLegible, ModuloLegible]),
+    format("No puedes rescatar a ~w desde ~w porque esta en ~w.~n", [Tripulante, ModuloActual, OtroModulo]),
     !,
     fail.
 
 rescatar(Tripulante) :-
-    format("Okey, no encuentro a ~w atrapado en este momento.~n", [Tripulante]),
+    format("No puedes rescatar a ~w porque no esta atrapado o no esta disponible en este momento.~n", [Tripulante]),
     !,
     fail.
