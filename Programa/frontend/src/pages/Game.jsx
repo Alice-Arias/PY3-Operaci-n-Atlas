@@ -102,6 +102,150 @@ function estadoAClase(estado) {
     return 'trapped';
 }
 
+function extraerPasosForzarGane(texto) {
+    if (!texto) return [];
+
+    return String(texto)
+        .split(/\r?\n/)
+        .map((linea) => linea.trim())
+        .filter((linea) => /^\d+\.\s+/.test(linea))
+        .map((linea) => linea.replace(/^\d+\.\s+/, '').trim())
+        .filter(Boolean);
+}
+
+function convertirPasoEnAcciones(paso, estadoActual) {
+    const texto = String(paso || '').trim();
+    if (!texto) return [];
+
+    const irYRecoger = texto.match(/^Ir a\s+(.+?)\s+y recoger\s+(.+)$/i);
+    if (irYRecoger) {
+        const destino = irYRecoger[1].trim();
+        const artefacto = irYRecoger[2].trim();
+        const acciones = [];
+        if (estadoActual?.moduloActual !== destino) {
+            acciones.push({ tipo: 'mover', valor: destino, descripcion: `Ir a ${destino}` });
+        }
+        acciones.push({ tipo: 'tomar', valor: artefacto, descripcion: `Recoger ${artefacto}` });
+        return acciones;
+    }
+
+    const reparar = texto.match(/^Reparar\s+(.+?)\s+en\s+(.+)$/i);
+    if (reparar) {
+        const sistema = reparar[1].trim();
+        const modulo = reparar[2].trim();
+        const acciones = [];
+        if (estadoActual?.moduloActual !== modulo) {
+            acciones.push({ tipo: 'mover', valor: modulo, descripcion: `Ir a ${modulo}` });
+        }
+        acciones.push({ tipo: 'reparar', valor: sistema, descripcion: `Reparar ${sistema}` });
+        return acciones;
+    }
+
+    const rescatar = texto.match(/^Rescatar\s+(.+?)\s+en\s+(.+)$/i);
+    if (rescatar) {
+        const tripulante = rescatar[1].trim();
+        const modulo = rescatar[2].trim();
+        const acciones = [];
+        if (estadoActual?.moduloActual !== modulo) {
+            acciones.push({ tipo: 'mover', valor: modulo, descripcion: `Ir a ${modulo}` });
+        }
+        acciones.push({ tipo: 'rescatar', valor: tripulante, descripcion: `Rescatar a ${tripulante}` });
+        return acciones;
+    }
+
+    const desbloquear = texto.match(/^Pasar por\s+(.+?)\s+para desbloquear acceso a\s+(.+)$/i);
+    if (desbloquear) {
+        const modulo = desbloquear[1].trim();
+        return [{ tipo: 'mover', valor: modulo, descripcion: `Ir a ${modulo}` }];
+    }
+
+    const irAModulo = texto.match(/^Ir a\s+(.+)$/i);
+    if (irAModulo) {
+        const modulo = irAModulo[1].trim();
+        return [{ tipo: 'mover', valor: modulo, descripcion: `Ir a ${modulo}` }];
+    }
+
+    return [];
+}
+
+function esPasoMovimiento(accion) {
+    return accion && accion.tipo === 'mover';
+}
+
+function normalizarPasoTexto(paso) {
+    return String(paso || '')
+        .trim()
+        .replace(/\s+/g, ' ')
+        .toLowerCase();
+}
+
+function agregarPasosUnicos(cola, pasosNuevos, vistos) {
+    pasosNuevos.forEach((paso) => {
+        const textoNormalizado = normalizarPasoTexto(paso);
+        if (!textoNormalizado || vistos.has(textoNormalizado)) {
+            return;
+        }
+        vistos.add(textoNormalizado);
+        cola.push(paso);
+    });
+}
+
+function agregarPasosPrioritarios(cola, pasosNuevos, vistos) {
+    const nuevos = [];
+
+    pasosNuevos.forEach((paso) => {
+        const textoNormalizado = normalizarPasoTexto(paso);
+        if (!textoNormalizado || vistos.has(textoNormalizado)) {
+            return;
+        }
+        vistos.add(textoNormalizado);
+        nuevos.push(paso);
+    });
+
+    if (nuevos.length > 0) {
+        cola.unshift(...nuevos.reverse());
+    }
+}
+
+function clasificarPasoLocal(paso) {
+    const texto = normalizarPasoTexto(paso);
+    if (texto.includes(' y recoger ')) return 1;
+    if (texto.startsWith('reparar ')) return 2;
+    if (texto.startsWith('rescatar ')) return 3;
+    return 4;
+}
+
+function generarPasosLocales(estadoActual) {
+    if (!estadoActual) return [];
+
+    const moduloActual = estadoActual.moduloActual;
+    const inventarioActual = new Set(Array.isArray(estadoActual.inventario) ? estadoActual.inventario : []);
+    const pasos = [];
+
+    const artefactosEnModulo = Array.isArray(estadoActual.artefactosDisponibles)
+        ? estadoActual.artefactosDisponibles.filter((item) => item?.modulo === moduloActual && item?.artefacto && !inventarioActual.has(item.artefacto))
+        : [];
+    artefactosEnModulo.forEach((item) => {
+        pasos.push(`Ir a ${item.modulo} y recoger ${item.artefacto}`);
+    });
+
+    const sistemasEnModulo = Array.isArray(estadoActual.sistemas)
+        ? estadoActual.sistemas.filter((item) => item?.modulo === moduloActual && item?.estado && normalizarEstadoTexto(item.estado) !== 'restaurado')
+        : [];
+    sistemasEnModulo.forEach((item) => {
+        pasos.push(`Reparar ${item.sistema} en ${item.modulo}`);
+    });
+
+    const tripulantesEnModulo = Array.isArray(estadoActual.tripulantes)
+        ? estadoActual.tripulantes.filter((item) => item?.modulo === moduloActual && item?.nombre && normalizarEstadoTexto(item.estado) !== 'rescatado')
+        : [];
+    tripulantesEnModulo.forEach((item) => {
+        pasos.push(`Rescatar ${item.nombre} en ${item.modulo}`);
+    });
+
+    return pasos.sort((a, b) => clasificarPasoLocal(a) - clasificarPasoLocal(b));
+}
+
 //Componente principal--------------------------------------------------------------------------------
 function Game() {
     const location   = useLocation();
@@ -116,6 +260,8 @@ function Game() {
     const [cargando, setCargando]   = useState(false);
     const [errorActual, setErrorActual] = useState(null);
     const [forzarGaneResultado, setForzarGaneResultado] = useState(null);
+    const [forzarGaneEnCurso, setForzarGaneEnCurso] = useState(false);
+    const [forzarGanePasoActual, setForzarGanePasoActual] = useState('');
     const [victoria, setVictoria]   = useState(false);
     const [mostrarBitacora, setMostrarBitacora] = useState(false);
     const [bitacoraPartida, setBitacoraPartida] = useState([]);
@@ -126,6 +272,7 @@ function Game() {
     const ultimoLogProcesadoRef = useRef('');
     const audioContextRef = useRef(null);
     const audioAmbienteRef = useRef(null);
+    const bloqueoGeneral = cargando || forzarGaneEnCurso;
 
     const limpiarErrorVisible = useCallback((texto) => {
         return (texto || '')
@@ -359,7 +506,7 @@ function Game() {
 
     //Manejar acciones del jugador--------------------------------------------------------------------------------
     const handleAccion = useCallback(async (tipo, valor) => {
-        if (!tipo || cargando) return;
+        if (!tipo || bloqueoGeneral) return;
         setCargando(true);
         setErrorActual(null);
         iniciarAudioAmbiente();
@@ -386,11 +533,11 @@ function Game() {
         } finally {
             setCargando(false);
         }
-    }, [cargando, actualizarEstado, iniciarAudioAmbiente, reproducirEfecto, evaluarVictoria]);
+    }, [bloqueoGeneral, actualizarEstado, iniciarAudioAmbiente, reproducirEfecto, evaluarVictoria]);
 
     //Ayuda de la computadora--------------------------------------------------------------------------------
     const handleAyuda = useCallback(async () => {
-        if (cargando) return;
+        if (bloqueoGeneral) return;
         setCargando(true);
         setErrorActual(null);
         iniciarAudioAmbiente();
@@ -407,12 +554,13 @@ function Game() {
         } finally {
             setCargando(false);
         }
-    }, [cargando, iniciarAudioAmbiente, reproducirEfecto, evaluarVictoria, limpiarErrorVisible]);
+    }, [bloqueoGeneral, iniciarAudioAmbiente, reproducirEfecto, evaluarVictoria, limpiarErrorVisible]);
 
     const handleForzarGane = useCallback(async () => {
-        if (cargando) return;
-        setCargando(true);
+        if (bloqueoGeneral) return;
         setErrorActual(null);
+        setForzarGaneResultado(null);
+        setForzarGanePasoActual('');
         iniciarAudioAmbiente();
 
         const mensajeFallback = 'No se pudo evaluar si esta partida tiene solucion. Verifica que el servidor backend este activo y reinicia la app si acabas de agregar la ruta.';
@@ -425,10 +573,221 @@ function Game() {
                 : limpiarErrorVisible(textoBase || mensajeFallback);
             const tipoResultado = /no tiene solucion|no esta conectado|sin solucion/i.test(texto) ? 'warning' : 'success';
 
-            setForzarGaneResultado({ tipo: tipoResultado, texto });
-            setLog(texto);
-            reproducirEfecto(tipoResultado === 'warning' ? 'error' : 'ok');
+            if (tipoResultado === 'warning') {
+                setForzarGaneResultado({ tipo: 'warning', texto });
+                setLog(texto);
+                reproducirEfecto('error');
+                return;
+            }
+
+            const pasos = extraerPasosForzarGane(textoBase);
+            if (pasos.length === 0) {
+                setForzarGaneResultado({
+                    tipo: 'warning',
+                    texto: 'Sí hay solución, pero no se encontraron pasos concretos para simular.'
+                });
+                setLog('Sí hay solución, pero no se encontraron pasos concretos para simular.');
+                reproducirEfecto('error');
+                return;
+            }
+
+            setForzarGaneEnCurso(true);
+            setForzarGaneResultado({
+                tipo: 'success',
+                texto: 'Sí hay solución. La computadora está ejecutando la misión paso a paso en vivo.'
+            });
+            setLog('Sí hay solución. La computadora está ejecutando la misión paso a paso en vivo.');
+            reproducirEfecto('ok');
+
+            let estadoSimulado = estado;
+            const colaPasos = [...pasos];
+            const pasosVistos = new Set(colaPasos.map(normalizarPasoTexto));
+            const pasosFallidos = new Map();
+            let ejecucionFallida = false;
+
+            const ejecutarMovimientoGuiado = async (destino) => {
+                const limiteIntentos = 4;
+
+                for (let intento = 0; intento < limiteIntentos; intento += 1) {
+                    const origen = estadoSimulado?.moduloActual;
+                    if (!origen || origen === destino) {
+                        return true;
+                    }
+
+                    const rutas = await apiService.obtenerRutas(origen, destino);
+                    if (!Array.isArray(rutas) || rutas.length === 0) {
+                        setLog(`Computadora: no encontró ruta desde ${formatNombre(origen)} hasta ${formatNombre(destino)}. Retrocediendo y recalculando...`);
+                        return false;
+                    }
+
+                    let seMovio = false;
+
+                    for (const ruta of rutas) {
+                        const camino = Array.isArray(ruta) ? ruta.filter(Boolean) : [];
+                        if (camino.length < 2) {
+                            continue;
+                        }
+
+                        let estadoTemporal = estadoSimulado;
+                        let rutaExitosa = true;
+
+                        for (const siguienteModulo of camino.slice(1)) {
+                            setLog(`Computadora: Ir a ${formatNombre(siguienteModulo)}`);
+                            await new Promise((resolve) => window.setTimeout(resolve, 550));
+
+                            const respuestaMovimiento = await apiService.enviarComando('mover', siguienteModulo);
+                            const salidaMovimiento = limpiarErrorVisible(respuestaMovimiento.out || '');
+
+                            if (!respuestaMovimiento.estado) {
+                                rutaExitosa = false;
+                                setLog(salidaMovimiento || `No se pudo avanzar hacia ${formatNombre(siguienteModulo)}.`);
+                                reproducirEfecto('error');
+                                break;
+                            }
+
+                            estadoTemporal = respuestaMovimiento.estado;
+                            estadoSimulado = respuestaMovimiento.estado;
+                            setEstado(respuestaMovimiento.estado);
+                            setLog(salidaMovimiento || `Te moviste a ${formatNombre(siguienteModulo)}.`);
+                            reproducirEfecto('ok');
+                            await evaluarVictoria();
+                            await new Promise((resolve) => window.setTimeout(resolve, 350));
+                        }
+
+                        if (rutaExitosa) {
+                            seMovio = true;
+                            estadoSimulado = estadoTemporal;
+                            break;
+                        }
+
+                        setLog(`Computadora: ruta bloqueada hacia ${formatNombre(destino)}. Retrocediendo y probando otra alternativa...`);
+                    }
+
+                    if (seMovio) {
+                        return true;
+                    }
+
+                    await actualizarEstado();
+                    estadoSimulado = await apiService.obtenerEstado();
+                    setEstado(estadoSimulado);
+                }
+
+                return false;
+            };
+
+            const replanificarDesdeEstadoActual = async () => {
+                const ayuda = await apiService.solicitarAyuda();
+                const pasosAyuda = extraerPasosForzarGane(ayuda.out || '');
+                const pasosLocales = generarPasosLocales(estadoSimulado);
+
+                agregarPasosUnicos(colaPasos, pasosLocales, pasosVistos);
+
+                if (pasosAyuda.length === 0) {
+                    return pasosLocales.length > 0;
+                }
+
+                const nuevosPasos = pasosAyuda.filter((paso) => !pasosVistos.has(normalizarPasoTexto(paso)));
+
+                if (nuevosPasos.length === 0) {
+                    return pasosLocales.length > 0;
+                }
+
+                setLog(`Computadora: recalculando ruta desde ${formatNombre(estadoSimulado?.moduloActual)}...`);
+                agregarPasosUnicos(colaPasos, nuevosPasos, pasosVistos);
+                return true;
+            };
+
+            while (colaPasos.length > 0) {
+                agregarPasosPrioritarios(colaPasos, generarPasosLocales(estadoSimulado), pasosVistos);
+                const paso = colaPasos.shift();
+                const textoPasoNormalizado = normalizarPasoTexto(paso);
+                const intentosPaso = pasosFallidos.get(textoPasoNormalizado) || 0;
+
+                if (intentosPaso >= 3) {
+                    setLog(`Computadora: descartando temporalmente "${paso}" tras varios intentos fallidos.`);
+                    continue;
+                }
+
+                setForzarGanePasoActual(`Procesando: ${paso}`);
+
+                const acciones = convertirPasoEnAcciones(paso, estadoSimulado);
+                if (acciones.length === 0) {
+                    setLog(`Computadora: ${paso}`);
+                    continue;
+                }
+
+                for (const accion of acciones) {
+                    if (esPasoMovimiento(accion)) {
+                        const okMovimiento = await ejecutarMovimientoGuiado(accion.valor);
+                        if (!okMovimiento) {
+                            const nuevosIntentos = (pasosFallidos.get(textoPasoNormalizado) || 0) + 1;
+                            pasosFallidos.set(textoPasoNormalizado, nuevosIntentos);
+                            setLog(`Computadora: no pudo llegar a ${formatNombre(accion.valor)} desde ${formatNombre(estadoSimulado?.moduloActual)}. Revisando el módulo actual...`);
+                            reproducirEfecto('error');
+                            agregarPasosPrioritarios(colaPasos, generarPasosLocales(estadoSimulado), pasosVistos);
+                            const replanificado = await replanificarDesdeEstadoActual();
+                            if (nuevosIntentos < 3) {
+                                colaPasos.push(paso);
+                            }
+                            if (!replanificado && colaPasos.length === 0) {
+                                setLog(`Computadora: no hay más ramas para probar desde ${formatNombre(estadoSimulado?.moduloActual)}.`);
+                            }
+                            break;
+                        }
+                        continue;
+                    }
+
+                    try {
+                        setLog(`Computadora: ${accion.descripcion}`);
+                        await new Promise((resolve) => window.setTimeout(resolve, 650));
+
+                        const respuestaAccion = await apiService.enviarComando(accion.tipo, accion.valor);
+                        const salidaAccion = limpiarErrorVisible(respuestaAccion.out || `Acción ejecutada: ${accion.descripcion}`);
+                        setLog(salidaAccion);
+
+                        if (respuestaAccion.estado) {
+                            estadoSimulado = respuestaAccion.estado;
+                            setEstado(respuestaAccion.estado);
+                        } else {
+                            await actualizarEstado();
+                            estadoSimulado = await apiService.obtenerEstado();
+                            setEstado(estadoSimulado);
+                        }
+
+                        reproducirEfecto('ok');
+                        await evaluarVictoria();
+                        await new Promise((resolve) => window.setTimeout(resolve, 450));
+                    } catch (errorAccion) {
+                        const mensajeError = limpiarErrorVisible(errorAccion?.message || `No se pudo ejecutar ${accion.descripcion}`);
+                        const nuevosIntentos = (pasosFallidos.get(textoPasoNormalizado) || 0) + 1;
+                        pasosFallidos.set(textoPasoNormalizado, nuevosIntentos);
+                        setLog(`${mensajeError} Revisando el módulo actual...`);
+                        reproducirEfecto('error');
+
+                        agregarPasosPrioritarios(colaPasos, generarPasosLocales(estadoSimulado), pasosVistos);
+                        const replanificado = await replanificarDesdeEstadoActual();
+                        if (nuevosIntentos < 3) {
+                            colaPasos.push(paso);
+                        }
+                        if (!replanificado && colaPasos.length === 0) {
+                            setLog(`Computadora: no hay más ramas para probar desde ${formatNombre(estadoSimulado?.moduloActual)}.`);
+                        }
+                        break;
+                    }
+                }
+
+            }
+
+            if (ejecucionFallida) {
+                return;
+            }
+
+            setForzarGanePasoActual('Simulación completa. Verificando victoria...');
             await evaluarVictoria();
+            setForzarGaneResultado({
+                tipo: 'success',
+                texto: 'Sí hay solución. La computadora ejecutó la secuencia sugerida en vivo.'
+            });
         } catch (e) {
             const mensajeError = e?.message || '';
             const texto = /<!DOCTYPE|<html/i.test(mensajeError)
@@ -438,9 +797,10 @@ function Game() {
             setLog(texto);
             reproducirEfecto('error');
         } finally {
-            setCargando(false);
+            setForzarGaneEnCurso(false);
+            setForzarGanePasoActual('');
         }
-    }, [cargando, iniciarAudioAmbiente, reproducirEfecto, evaluarVictoria, limpiarErrorVisible]);
+    }, [bloqueoGeneral, estado, actualizarEstado, iniciarAudioAmbiente, reproducirEfecto, evaluarVictoria, limpiarErrorVisible]);
 
     //Guardar / Cargar--------------------------------------------------------------------------------
     const handleGuardar = useCallback(async () => {
@@ -470,8 +830,11 @@ function Game() {
     }, [iniciarAudioAmbiente, reproducirEfecto]);
 
     const handleOtraPartida = useCallback(() => {
-        navigate('/');
-    }, [navigate]);
+        setVictoria(false);
+        setMostrarBitacora(false);
+        window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+        window.location.replace('/');
+    }, []);
 
     useEffect(() => {
         return () => {
@@ -676,7 +1039,7 @@ function Game() {
                                             key={destino}
                                             className="move-btn"
                                             onClick={() => handleAccion('mover', destino)}
-                                            disabled={cargando}
+                                            disabled={bloqueoGeneral}
                                         >
                                             <span>{formatNombre(destino)}</span>
                                             <span className="move-btn-arrow">→</span>
@@ -721,10 +1084,12 @@ function Game() {
                             <button
                                 className="force-win-btn"
                                 onClick={handleForzarGane}
-                                disabled={cargando}
+                                disabled={bloqueoGeneral}
                             >
-                                <span>Forzar Gane</span>
-                                <span className="force-win-btn-sub">Backtracking en vivo</span>
+                                <span>{forzarGaneEnCurso ? 'Computadora jugando...' : 'Forzar Gane'}</span>
+                                <span className="force-win-btn-sub">
+                                    {forzarGaneEnCurso ? 'Simulación en vivo' : 'Backtracking en vivo'}
+                                </span>
                             </button>
                             {forzarGaneResultado && (
                                 <div className={`force-win-result ${forzarGaneResultado.tipo}`}>
@@ -732,6 +1097,9 @@ function Game() {
                                         {forzarGaneResultado.tipo === 'warning' ? 'Sin solución' : 'Solución encontrada'}
                                     </span>
                                     <span className="force-win-result-text">{forzarGaneResultado.texto}</span>
+                                        {forzarGaneEnCurso && forzarGanePasoActual && (
+                                            <span className="force-win-result-text">{forzarGanePasoActual}</span>
+                                        )}
                                 </div>
                             )}
                         </div>
@@ -745,7 +1113,7 @@ function Game() {
                     <TerminalConsole
                         log={log}
                         onAyuda={handleAyuda}
-                        disabled={cargando}
+                        disabled={bloqueoGeneral}
                         errorActual={errorActual}
                         onDismissError={() => setErrorActual(null)}
                     />
@@ -823,15 +1191,15 @@ function Game() {
                     )}
 
                     {/* Acciones contextuales */}
-                    <ControlPanel estado={estado} onAccion={handleAccion} disabled={cargando} />
+                    <ControlPanel estado={estado} onAccion={handleAccion} disabled={bloqueoGeneral} />
 
                     {/* Guardar / Cargar */}
                     <div className="panel">
                         <div className="save-zone">
-                            <button className="btn-save" onClick={handleGuardar} disabled={cargando}>
+                            <button className="btn-save" onClick={handleGuardar} disabled={bloqueoGeneral}>
                                 Guardar Misión
                             </button>
-                            <button className="btn-load" onClick={handleOtraPartida} disabled={cargando}>
+                            <button className="btn-load" onClick={handleOtraPartida} disabled={bloqueoGeneral}>
                                 Salir
                             </button>
                         </div>
@@ -861,13 +1229,13 @@ function Game() {
                             Tiempo total: <strong>{formatTimer(timer)}</strong>
                         </div>
                         <div className="victory-actions">
-                            <button className="victory-btn primary" onClick={handleGuardar} disabled={cargando}>
+                            <button className="victory-btn primary" onClick={handleGuardar} disabled={bloqueoGeneral}>
                                 Guardar misión
                             </button>
-                            <button className="victory-btn secondary" onClick={handleVerBitacora} disabled={cargandoBitacora}>
+                            <button className="victory-btn secondary" onClick={handleVerBitacora} disabled={cargandoBitacora || forzarGaneEnCurso}>
                                 Ver bitácora de tiempos
                             </button>
-                            <button className="victory-btn ghost" onClick={handleOtraPartida}>
+                            <button className="victory-btn ghost" onClick={handleOtraPartida} type="button">
                                 Otra partida
                             </button>
                         </div>
@@ -875,9 +1243,9 @@ function Game() {
 
                     {mostrarBitacora && (
                         <div className="victory-history-panel">
-                                <div className="victory-history-header">
-                                    <span>Bitácora de la partida</span>
-                                <button className="victory-history-close" onClick={() => setMostrarBitacora(false)}>
+                            <div className="victory-history-header">
+                                <span>Bitácora de la partida</span>
+                                <button className="victory-history-close" onClick={() => setMostrarBitacora(false)} type="button">
                                     Cerrar
                                 </button>
                             </div>

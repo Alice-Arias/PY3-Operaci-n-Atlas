@@ -1,7 +1,12 @@
+import { useEffect } from 'react'
 import './Home.css'
 import StartCard from '../components/StartCard'
 
 function Home() {
+    useEffect(() => {
+        window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+    }, [])
+
     return (
         <div className='home'>
             <div className="title">

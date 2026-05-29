@@ -1,15 +1,14 @@
-jugador(modulo_medico).
-artefactosLogrados([tarjeta_seguridad,traje_espacial,fusible,energia,comunicaciones,medicina]).
+jugador(enfermeria).
+artefactosLogrados([tarjeta_seguridad,fusible,traje_espacial,energia,comunicaciones,medicina]).
 tomado(tarjeta_seguridad).
-tomado(traje_espacial).
 tomado(fusible).
+tomado(traje_espacial).
 tomado(energia).
 tomado(comunicaciones).
 tomado(medicina).
 visitado(puente_mando).
-visitado(enfermeria).
-visitado(camaras_seguridad).
 visitado(laboratorio).
+visitado(enfermeria).
 visitado(modulo_energia).
 visitado(centro_comunicaciones).
 visitado(modulo_escape).
@@ -20,5 +19,5 @@ sistema(modulo_escape, escape, [energia], restaurado).
 tripulante(marcus, laboratorio, [comunicaciones], rescatado).
 tripulante(elena, modulo_energia, [energia], rescatado).
 tripulante(kai, enfermeria, [energia], rescatado).
-jugador_nombre('Ali').
-partida_actual(5).
+jugador_nombre('Alice').
+partida_actual(10).

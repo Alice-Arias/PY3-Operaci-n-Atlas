@@ -94,6 +94,16 @@ export const apiService = {
         }
     },
 
+    obtenerRutas: async (inicio, fin) => {
+        try {
+            const res = await fetch(`${BASE_URL}/ruta?inicio=${encodeURIComponent(inicio)}&fin=${encodeURIComponent(fin)}`);
+            const data = await manejarRespuesta(res);
+            return parsearRutasAnidadas(data.raw || '[]');
+        } catch {
+            return [];
+        }
+    },
+
     obtenerRegistroPartidas: async () => {
         try {
             const res = await fetch(`${BASE_URL}/registro`);
@@ -140,3 +150,59 @@ export const apiService = {
         return data;
     }
 };
+
+function parsearRutasAnidadas(texto) {
+    const rutas = parsearListaAnidada(texto);
+    return rutas
+        .map((ruta) => (Array.isArray(ruta) ? ruta : []))
+        .filter((ruta) => ruta.length > 0);
+}
+
+function parsearListaAnidada(texto) {
+    if (!texto || typeof texto !== 'string') return [];
+
+    const valor = texto.trim();
+    if (!valor.startsWith('[') || !valor.endsWith(']')) {
+        return [limpiarElementoLocal(valor)].filter(Boolean);
+    }
+
+    const contenido = valor.slice(1, -1).trim();
+    if (contenido === '') return [];
+
+    const elementos = [];
+    let acumulado = '';
+    let profundidad = 0;
+
+    for (let i = 0; i < contenido.length; i += 1) {
+        const caracter = contenido[i];
+        if (caracter === '[' || caracter === '(') profundidad += 1;
+        if (caracter === ']' || caracter === ')') profundidad -= 1;
+
+        if (caracter === ',' && profundidad === 0) {
+            elementos.push(acumulado.trim());
+            acumulado = '';
+            continue;
+        }
+
+        acumulado += caracter;
+    }
+
+    if (acumulado.trim() !== '') elementos.push(acumulado.trim());
+
+    return elementos.map((item) => {
+        const limpio = item.trim();
+        if (limpio.startsWith('[') && limpio.endsWith(']')) {
+            return parsearListaAnidada(limpio);
+        }
+        return limpiarElementoLocal(limpio);
+    });
+}
+
+function limpiarElementoLocal(texto) {
+    if (!texto || typeof texto !== 'string') return texto;
+    const valor = texto.trim();
+    if ((valor.startsWith("'") && valor.endsWith("'")) || (valor.startsWith('"') && valor.endsWith('"'))) {
+        return valor.slice(1, -1);
+    }
+    return valor;
+}

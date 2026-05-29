@@ -89,19 +89,11 @@ modulos_objetivo_pendientes(ModulosPendientes) :-
     append([ModulosSistemas, ModulosTripulantes, ModulosArtefactos], ModulosUnificados),
     sort(ModulosUnificados, ModulosPendientes).
 
-modulo_pendiente_no_alcanzable(ModuloActual, ModuloInalcanzable) :-
-    modulos_objetivo_pendientes(ModulosPendientes),
-    member(ModuloInalcanzable, ModulosPendientes),
-    \+ ruta(ModuloActual, ModuloInalcanzable, _),
-    !.
-
 forzar_gane :-
     jugador(ModuloActual),
     (   condicion_victoria_cumplida
     ->  writeln("¡Felicidades! Esta partida ya cumple las condiciones de victoria."),
         writeln("Si quieres revisar el resultado final, usa la verificacion de victoria.")
-    ;   modulo_pendiente_no_alcanzable(ModuloActual, ModuloBloqueado)
-    ->  format("Esta partida no tiene solucion porque ~w no esta conectado desde ~w.~n", [ModuloBloqueado, ModuloActual])
     ;   writeln("Sí hay solución. Esta partida todavía puede ganarse desde este estado."),
         como_gano
     ).

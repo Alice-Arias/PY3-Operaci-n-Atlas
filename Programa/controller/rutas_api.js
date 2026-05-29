@@ -31,6 +31,17 @@ router.get('/conexiones', (req, res) => {
     ejecutarConsultaLista("listar_conexiones_ui(Cs), format('~q', [Cs])", res);
 });
 
+router.get('/ruta', (req, res) => {
+    const inicio = req.query && req.query.inicio ? String(req.query.inicio).trim() : '';
+    const fin = req.query && req.query.fin ? String(req.query.fin).trim() : '';
+
+    if (!inicio || !fin) {
+        return res.status(400).json({ error: 'Faltan los modulos de inicio y fin.' });
+    }
+
+    return ejecutarConsultaLista(`findall(Camino, ruta('${escaparAtomProlog(inicio)}', '${escaparAtomProlog(fin)}', Camino), Rutas), format('~q', [Rutas])`, res);
+});
+
 router.get('/registro', (req, res) => {
     ejecutarConsultaLista("listar_registro_partidas_ui(Rs), format('~q', [Rs])", res);
 });
