@@ -10,6 +10,7 @@
 % =============================================================================
 
 :- use_module(library(lists)).
+:- use_module(library(http/json)).
 
 % -----------------------------------------------------------------------------
 % REINICIAR ESTADO
@@ -154,6 +155,14 @@ ayuda_ui :-
 forzar_gane_ui :-
     restaurar_estado_desde_disco,
     forzar_gane.
+
+% Devuelve el plan estructurado como JSON en salida
+forzar_gane_plan_ui :-
+    restaurar_estado_desde_disco,
+    forzar_gane_plan(Plan),
+    % Escribir JSON limpio para que el controlador lo pueda parsear
+    with_output_to(atom(JSONAtom), json_write(current_output, Plan)),
+    format("~w", [JSONAtom]).
 % -----------------------------------------------------------------------------
 % VERIFICAR VICTORIA
 % -----------------------------------------------------------------------------

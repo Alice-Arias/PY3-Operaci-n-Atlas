@@ -213,3 +213,135 @@ print_pasos([H|T], N) :-
     format("~w. ~w~n", [N, H]),
     N1 is N + 1,
     print_pasos(T, N1).
+
+% -----------------------------------------------------------------------------
+% Generador de plan estructurado para forzar_gane
+% Devuelve una lista simple de strings (pasos) sin escribir en salida.
+% Esto permite que el controlador pida el plan como JSON.
+% -----------------------------------------------------------------------------
+forzar_gane_plan(Plan) :-
+    jugador(ModuloActual),
+    findall(SistemaPendiente, (sistema(_, SistemaPendiente, _, _), \+ sistema_restaurado(SistemaPendiente)), SistemasPendientesSinOrden),
+    sort(SistemasPendientesSinOrden, SistemasPendientes),
+    findall(TripulantePendiente, (tripulante(TripulantePendiente, _, _, _), \+ tripulante_rescatado(TripulantePendiente)), TripulantesPendientesSinOrden),
+    sort(TripulantesPendientesSinOrden, TripulantesPendientes),
+    findall(ArtefactoPendiente, (artefacto(ArtefactoPendiente, _), \+ tomado(ArtefactoPendiente)), ArtefactosPendientesSinOrden),
+    sort(ArtefactosPendientesSinOrden, ArtefactosPendientes),
+    findall(Destino, (puedo_ir(Destino), Destino \= ModuloActual), MovimientosSinOrden),
+    sort(MovimientosSinOrden, MovimientosPosibles),
+    findall(Destino, (modulo_conectado(ModuloActual, Destino), Destino \= ModuloActual, \+ puedo_ir(Destino)), MovimientosBloqueadosSinOrden),
+    sort(MovimientosBloqueadosSinOrden, MovimientosBloqueados),
+    % Generar pasos prácticos y numerados (reutiliza los predicados existentes)
+    findall(P, (member(D, MovimientosBloqueados), pasos_artefactos_para_destino(D, P)), ArtePasosBloqueados),
+    findall(P, (member(D, MovimientosBloqueados), pasos_sistemas_para_destino(D, P)), SistPasosBloqueados),
+    findall(P, (member(D, MovimientosBloqueados), paso_previos_para_destino(D, P)), PrevPasosBloqueados),
+    findall(P, pasos_generales_artefactos(P), ArtePasosGen),
+    findall(P, pasos_generales_sistemas(P), SistPasosGen),
+    findall(P, pasos_rescate(P), RescatePasos),
+    append([PrevPasosBloqueados, ArtePasosBloqueados, SistPasosBloqueados, ArtePasosGen, SistPasosGen, RescatePasos], TodosPasosRaw),
+    list_to_set(TodosPasosRaw, TodosPasosSet),
+    findall(X, member(X, TodosPasosSet), TodosPasos),
+    % Expandir pasos añadiendo movimientos intermedios a partir del modulo actual
+    expand_pasos(ModuloActual, TodosPasos, Plan).
+
+% Expandir lista de pasos añadiendo "Ir a <modulo>" intermedios cuando sea posible
+expand_pasos(_, [], []).
+expand_pasos(Origen, [Paso|Resto], PlanExpandido) :-
+    expand_paso(Origen, Paso, PasosGenerados, NuevoOrigen),
+    expand_pasos(NuevoOrigen, Resto, RestoExpandido),
+    append(PasosGenerados, RestoExpandido, PlanExpandido).
+
+% Caso: 'Ir a <Destino> y recoger <Artefacto>'
+expand_paso(Origen, Paso, PasosGenerados, NuevoOrigen) :-
+    atomic_list_concat([Left, Arte], ' y recoger ', Paso),
+    sub_atom(Left, 0, 5, _, 'Ir a '),
+    sub_atom(Left, 5, _, 0, DestAtom),
+    atom_string(DestAtom, Dest),
+    ( ruta(Origen, Dest, Camino) ->
+        % generar movimientos intermedios (sin el destino final)
+        Camino = [_|Tail],
+        ( append(Intermedios, [Dest], Tail) -> true ; Intermedios = [] ),
+        findall(Ms, (member(M, Intermedios), format(atom(Ms), 'Ir a ~w', [M])), Movs),
+        % conservar paso final con recoger
+        format(atom(Reco), 'Ir a ~w y recoger ~w', [Dest, Arte]),
+        append(Movs, [Reco], PasosGenerados),
+        NuevoOrigen = Dest
+    ;
+        % no hay ruta, mantener paso original
+        PasosGenerados = [Paso],
+        NuevoOrigen = Origen
+    ).
+
+% Caso: 'Reparar <Sistema> en <Modulo>'
+expand_paso(Origen, Paso, PasosGenerados, NuevoOrigen) :-
+    sub_atom(Paso, 0, 8, _, 'Reparar '),
+    sub_atom(Paso, 8, _, 0, Rest),
+    atomic_list_concat([SistemaAtom, ModAtom], ' en ', Rest),
+    atom_string(ModAtom, Mod),
+    ( ruta(Origen, Mod, Camino) ->
+        Camino = [_|Tail],
+        ( append(Intermedios, [Mod], Tail) -> true ; Intermedios = [] ),
+        findall(Ms, (member(M, Intermedios), format(atom(Ms), 'Ir a ~w', [M])), Movs),
+        append(Movs, [Paso], PasosGenerados),
+        NuevoOrigen = Mod
+    ;
+        PasosGenerados = [Paso],
+        NuevoOrigen = Origen
+    ).
+
+% Caso: 'Rescatar <Trip> en <Modulo>'
+expand_paso(Origen, Paso, PasosGenerados, NuevoOrigen) :-
+    sub_atom(Paso, 0, 9, _, 'Rescatar '),
+    sub_atom(Paso, 9, _, 0, Rest),
+    atomic_list_concat([TripAtom, ModAtom], ' en ', Rest),
+    atom_string(ModAtom, Mod),
+    ( ruta(Origen, Mod, Camino) ->
+        Camino = [_|Tail],
+        ( append(Intermedios, [Mod], Tail) -> true ; Intermedios = [] ),
+        findall(Ms, (member(M, Intermedios), format(atom(Ms), 'Ir a ~w', [M])), Movs),
+        append(Movs, [Paso], PasosGenerados),
+        NuevoOrigen = Mod
+    ;
+        PasosGenerados = [Paso],
+        NuevoOrigen = Origen
+    ).
+
+% Caso: 'Pasar por <Mprevio> para desbloquear acceso a <Destino>'
+expand_paso(Origen, Paso, PasosGenerados, NuevoOrigen) :-
+    atomic_list_concat(['Pasar por ', Rest], Paso),
+    atomic_list_concat([Mprev, _], ' para desbloquear acceso a ', Rest),
+    atom_string(Mprev, ModPrev),
+    ( ruta(Origen, ModPrev, Camino) ->
+        Camino = [_|Tail],
+        ( append(Intermedios, [ModPrev], Tail) -> true ; Intermedios = [] ),
+        findall(Ms, (member(M, Intermedios), format(atom(Ms), 'Ir a ~w', [M])), Movs),
+        append(Movs, [Paso], PasosGenerados),
+        NuevoOrigen = ModPrev
+    ;
+        PasosGenerados = [Paso],
+        NuevoOrigen = Origen
+    ).
+
+% Caso: 'Ir a <Modulo>' simple
+expand_paso(Origen, Paso, PasosGenerados, NuevoOrigen) :-
+    sub_atom(Paso, 0, 5, _, 'Ir a '),
+    sub_atom(Paso, 5, _, 0, DestAtom),
+    atom_string(DestAtom, Dest),
+    ( ruta(Origen, Dest, Camino) ->
+        Camino = [_|Tail],
+        ( append(Intermedios, [Dest], Tail) -> true ; Intermedios = [] ),
+        findall(Ms, (member(M, Intermedios), format(atom(Ms), 'Ir a ~w', [M])), Movs),
+        % evitar duplicar el "Ir a Dest" si Intermedios ya contiene Dest
+        append(Movs, [Paso], PasosGenerados),
+        NuevoOrigen = Dest
+    ;
+        PasosGenerados = [Paso],
+        NuevoOrigen = Origen
+    ).
+
+% Caso por defecto: no reconocido
+expand_paso(Origen, Paso, [Paso], Origen) :-
+    \+ sub_atom(Paso, 0, 5, _, 'Ir a '),
+    \+ sub_atom(Paso, 0, 8, _, 'Reparar '),
+    \+ sub_atom(Paso, 0, 9, _, 'Rescatar '),
+    \+ atomic_list_concat(['Pasar por ' | _], _, Paso).

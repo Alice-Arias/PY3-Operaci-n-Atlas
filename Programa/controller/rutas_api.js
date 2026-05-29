@@ -8,6 +8,9 @@ const {
     ejecutarAyuda,
     ejecutarForzarGane
 } = require('./servicio_prolog_api');
+const { ejecutarForzarGanePlan } = require('./servicio_prolog_api');
+const { ejecutarPlan } = require('./servicio_prolog_api');
+const { ejecutarPlanStream } = require('./servicio_prolog_api');
 
 const router = express.Router();
 
@@ -132,6 +135,18 @@ router.post('/ayuda', (req, res) => {
 
 router.post('/forzar_gane', (req, res) => {
     ejecutarForzarGane(res);
+});
+
+router.post('/forzar_gane_plan', (req, res) => {
+    ejecutarForzarGanePlan(res);
+});
+
+router.post('/forzar_gane_execute', (req, res) => {
+    ejecutarPlan(res);
+});
+
+router.get('/forzar_gane_execute_stream', (req, res) => {
+    ejecutarPlanStream(res);
 });
 
 router.post('/verificar', (req, res) => {

@@ -149,6 +149,18 @@ export const apiService = {
         const data = await manejarRespuesta(res);
         return data;
     }
+    ,
+    forzarGanePlan: async () => {
+        const res = await fetch(`${BASE_URL}/forzar_gane_plan`, { method: 'POST' });
+        const data = await manejarRespuesta(res);
+        return data.plan || [];
+    }
+    ,
+    forzarGaneExecute: async () => {
+        const res = await fetch(`${BASE_URL}/forzar_gane_execute`, { method: 'POST' });
+        const data = await manejarRespuesta(res);
+        return data;
+    }
 };
 
 function parsearRutasAnidadas(texto) {

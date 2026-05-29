@@ -5,6 +5,7 @@ import MapaVisual from '../components/game/MapaVisual';
 import ControlPanel from '../components/game/ControlPanel';
 import TerminalConsole from '../components/game/TerminalConsole';
 import { apiService } from '../services/api';
+import { parsearEstadoProlog } from '../services/parserProlog';
 
 function formatNombre(nombre) {
     if (!nombre) return '';
@@ -112,7 +113,6 @@ function extraerPasosForzarGane(texto) {
         .map((linea) => linea.replace(/^\d+\.\s+/, '').trim())
         .filter(Boolean);
 }
-
 function convertirPasoEnAcciones(paso, estadoActual) {
     const texto = String(paso || '').trim();
     if (!texto) return [];
@@ -168,83 +168,120 @@ function convertirPasoEnAcciones(paso, estadoActual) {
     return [];
 }
 
-function esPasoMovimiento(accion) {
-    return accion && accion.tipo === 'mover';
-}
-
-function normalizarPasoTexto(paso) {
-    return String(paso || '')
-        .trim()
-        .replace(/\s+/g, ' ')
-        .toLowerCase();
-}
-
-function agregarPasosUnicos(cola, pasosNuevos, vistos) {
-    pasosNuevos.forEach((paso) => {
-        const textoNormalizado = normalizarPasoTexto(paso);
-        if (!textoNormalizado || vistos.has(textoNormalizado)) {
-            return;
-        }
-        vistos.add(textoNormalizado);
-        cola.push(paso);
-    });
-}
-
-function agregarPasosPrioritarios(cola, pasosNuevos, vistos) {
-    const nuevos = [];
-
-    pasosNuevos.forEach((paso) => {
-        const textoNormalizado = normalizarPasoTexto(paso);
-        if (!textoNormalizado || vistos.has(textoNormalizado)) {
-            return;
-        }
-        vistos.add(textoNormalizado);
-        nuevos.push(paso);
-    });
-
-    if (nuevos.length > 0) {
-        cola.unshift(...nuevos.reverse());
-    }
-}
-
-function clasificarPasoLocal(paso) {
-    const texto = normalizarPasoTexto(paso);
-    if (texto.includes(' y recoger ')) return 1;
-    if (texto.startsWith('reparar ')) return 2;
-    if (texto.startsWith('rescatar ')) return 3;
-    return 4;
-}
-
-function generarPasosLocales(estadoActual) {
+function obtenerSugerenciasPendientesDesdeEstado(estadoActual) {
     if (!estadoActual) return [];
 
-    const moduloActual = estadoActual.moduloActual;
-    const inventarioActual = new Set(Array.isArray(estadoActual.inventario) ? estadoActual.inventario : []);
-    const pasos = [];
-
-    const artefactosEnModulo = Array.isArray(estadoActual.artefactosDisponibles)
-        ? estadoActual.artefactosDisponibles.filter((item) => item?.modulo === moduloActual && item?.artefacto && !inventarioActual.has(item.artefacto))
+    const sugerencias = [];
+    const moduloActual = estadoActual.moduloActual || '';
+    const tripulantesPendientes = Array.isArray(estadoActual.tripulantes)
+        ? estadoActual.tripulantes.filter((tripulante) => normalizarEstadoTexto(tripulante?.estado) !== 'rescatado')
         : [];
-    artefactosEnModulo.forEach((item) => {
-        pasos.push(`Ir a ${item.modulo} y recoger ${item.artefacto}`);
+    const sistemasPendientes = Array.isArray(estadoActual.sistemas)
+        ? estadoActual.sistemas.filter((sistema) => normalizarEstadoTexto(sistema?.estado) !== 'restaurado')
+        : [];
+
+    tripulantesPendientes.forEach((tripulante) => {
+        if (tripulante?.modulo && tripulante.modulo !== moduloActual) {
+            sugerencias.push(`Ir a ${formatNombre(tripulante.modulo)}`);
+        }
+        sugerencias.push(`Rescatar a ${formatNombre(tripulante?.nombre)}`);
     });
 
-    const sistemasEnModulo = Array.isArray(estadoActual.sistemas)
-        ? estadoActual.sistemas.filter((item) => item?.modulo === moduloActual && item?.estado && normalizarEstadoTexto(item.estado) !== 'restaurado')
-        : [];
-    sistemasEnModulo.forEach((item) => {
-        pasos.push(`Reparar ${item.sistema} en ${item.modulo}`);
+    sistemasPendientes.forEach((sistema) => {
+        if (sistema?.modulo && sistema.modulo !== moduloActual) {
+            sugerencias.push(`Ir a ${formatNombre(sistema.modulo)}`);
+        }
+        sugerencias.push(`Reparar ${formatNombre(sistema?.sistema)} en ${formatNombre(sistema?.modulo)}`);
     });
 
-    const tripulantesEnModulo = Array.isArray(estadoActual.tripulantes)
-        ? estadoActual.tripulantes.filter((item) => item?.modulo === moduloActual && item?.nombre && normalizarEstadoTexto(item.estado) !== 'rescatado')
-        : [];
-    tripulantesEnModulo.forEach((item) => {
-        pasos.push(`Rescatar ${item.nombre} en ${item.modulo}`);
-    });
-
-    return pasos.sort((a, b) => clasificarPasoLocal(a) - clasificarPasoLocal(b));
+    return [...new Set(sugerencias)].filter(Boolean).slice(0, 6);
 }
+
+function construirGrafoBidireccional(conexiones) {
+    const grafo = new Map();
+
+    (Array.isArray(conexiones) ? conexiones : []).forEach(({ origen, destino }) => {
+        if (!origen || !destino) return;
+        if (!grafo.has(origen)) grafo.set(origen, new Set());
+        if (!grafo.has(destino)) grafo.set(destino, new Set());
+        grafo.get(origen).add(destino);
+        grafo.get(destino).add(origen);
+    });
+
+    return grafo;
+}
+
+function buscarRutaMasCorta(origen, destino, conexiones) {
+    if (!origen || !destino) return [];
+    if (origen === destino) return [origen];
+
+    const grafo = construirGrafoBidireccional(conexiones);
+    const visitados = new Set([origen]);
+    const cola = [[origen]];
+
+    while (cola.length > 0) {
+        const camino = cola.shift();
+        const actual = camino[camino.length - 1];
+        const vecinos = grafo.get(actual) || new Set();
+
+        for (const vecino of vecinos) {
+            if (visitados.has(vecino)) continue;
+            const nuevoCamino = [...camino, vecino];
+            if (vecino === destino) return nuevoCamino;
+            visitados.add(vecino);
+            cola.push(nuevoCamino);
+        }
+    }
+
+    return [];
+}
+
+function formatearRuta(ruta) {
+    if (!Array.isArray(ruta) || ruta.length === 0) return '';
+    return ruta.map((item) => formatNombre(item)).join(' → ');
+}
+
+function crearPendientesGuiadosDesdeEstado(estadoActual, conexiones) {
+    if (!estadoActual) return [];
+
+    const moduloActual = estadoActual.moduloActual || '';
+    const pendientes = [];
+
+    const tripulantesPendientes = Array.isArray(estadoActual.tripulantes)
+        ? estadoActual.tripulantes.filter((tripulante) => normalizarEstadoTexto(tripulante?.estado) !== 'rescatado')
+        : [];
+    const sistemasPendientes = Array.isArray(estadoActual.sistemas)
+        ? estadoActual.sistemas.filter((sistema) => normalizarEstadoTexto(sistema?.estado) !== 'restaurado')
+        : [];
+
+    tripulantesPendientes.forEach((tripulante) => {
+        const moduloObjetivo = tripulante?.modulo || '';
+        const ruta = buscarRutaMasCorta(moduloActual, moduloObjetivo, conexiones);
+        pendientes.push({
+            tipo: 'rescatar',
+            objetivo: tripulante?.nombre || 'Tripulante',
+            modulo: moduloObjetivo,
+            accion: `Rescatar a ${formatNombre(tripulante?.nombre)}`,
+            ruta,
+        });
+    });
+
+    sistemasPendientes.forEach((sistema) => {
+        const moduloObjetivo = sistema?.modulo || '';
+        const ruta = buscarRutaMasCorta(moduloActual, moduloObjetivo, conexiones);
+        pendientes.push({
+            tipo: 'reparar',
+            objetivo: sistema?.sistema || 'Sistema',
+            modulo: moduloObjetivo,
+            accion: `Reparar ${formatNombre(sistema?.sistema)} en ${formatNombre(sistema?.modulo)}`,
+            ruta,
+        });
+    });
+
+    return pendientes.slice(0, 6);
+}
+// Nota: la generación y ejecución del plan fue movida al backend Prolog.
+// El frontend ahora solicita el plan/ejecución al controlador y muestra resultados.
 
 //Componente principal--------------------------------------------------------------------------------
 function Game() {
@@ -262,6 +299,7 @@ function Game() {
     const [forzarGaneResultado, setForzarGaneResultado] = useState(null);
     const [forzarGaneEnCurso, setForzarGaneEnCurso] = useState(false);
     const [forzarGanePasoActual, setForzarGanePasoActual] = useState('');
+    const [forzarGanePendientes, setForzarGanePendientes] = useState([]);
     const [victoria, setVictoria]   = useState(false);
     const [mostrarBitacora, setMostrarBitacora] = useState(false);
     const [bitacoraPartida, setBitacoraPartida] = useState([]);
@@ -272,6 +310,7 @@ function Game() {
     const ultimoLogProcesadoRef = useRef('');
     const audioContextRef = useRef(null);
     const audioAmbienteRef = useRef(null);
+    const forzarGaneRondasRef = useRef(0);
     const bloqueoGeneral = cargando || forzarGaneEnCurso;
 
     const limpiarErrorVisible = useCallback((texto) => {
@@ -499,8 +538,10 @@ function Game() {
         try {
             const estadoActual = await apiService.obtenerEstado();
             setEstado(estadoActual);
+            return estadoActual;
         } catch (e) {
             // silencioso — el log ya habrá mostrado cualquier error
+            return null;
         }
     }, []);
 
@@ -556,251 +597,98 @@ function Game() {
         }
     }, [bloqueoGeneral, iniciarAudioAmbiente, reproducirEfecto, evaluarVictoria, limpiarErrorVisible]);
 
-    const handleForzarGane = useCallback(async () => {
+    const handleForzarGane = useCallback(async (opciones = {}) => {
+        const { auto = false } = opciones;
         if (bloqueoGeneral) return;
+        if (!auto) {
+            forzarGaneRondasRef.current = 0;
+        }
         setErrorActual(null);
         setForzarGaneResultado(null);
         setForzarGanePasoActual('');
+        setForzarGanePendientes([]);
         iniciarAudioAmbiente();
 
-        const mensajeFallback = 'No se pudo evaluar si esta partida tiene solucion. Verifica que el servidor backend este activo y reinicia la app si acabas de agregar la ruta.';
-
+        setForzarGaneEnCurso(true);
+        let es = null;
         try {
-            const respuesta = await apiService.forzarGane();
-            const textoBase = respuesta.out || '';
-            const texto = /<!DOCTYPE|<html/i.test(textoBase)
-                ? mensajeFallback
-                : limpiarErrorVisible(textoBase || mensajeFallback);
-            const tipoResultado = /no tiene solucion|no esta conectado|sin solucion/i.test(texto) ? 'warning' : 'success';
+            // Usar URL absoluta hacia el backend para evitar que Vite/proxy sirva la ruta desde el frontend
+            es = new EventSource('http://localhost:3000/api/forzar_gane_execute_stream');
 
-            if (tipoResultado === 'warning') {
-                setForzarGaneResultado({ tipo: 'warning', texto });
-                setLog(texto);
-                reproducirEfecto('error');
-                return;
-            }
+            es.onmessage = (ev) => {
+                if (!ev.data) return;
+                let dato = null;
+                try { dato = JSON.parse(ev.data); } catch { dato = null; }
+                if (!dato) return;
 
-            const pasos = extraerPasosForzarGane(textoBase);
-            if (pasos.length === 0) {
-                setForzarGaneResultado({
-                    tipo: 'warning',
-                    texto: 'Sí hay solución, pero no se encontraron pasos concretos para simular.'
-                });
-                setLog('Sí hay solución, pero no se encontraron pasos concretos para simular.');
-                reproducirEfecto('error');
-                return;
-            }
-
-            setForzarGaneEnCurso(true);
-            setForzarGaneResultado({
-                tipo: 'success',
-                texto: 'Sí hay solución. La computadora está ejecutando la misión paso a paso en vivo.'
-            });
-            setLog('Sí hay solución. La computadora está ejecutando la misión paso a paso en vivo.');
-            reproducirEfecto('ok');
-
-            let estadoSimulado = estado;
-            const colaPasos = [...pasos];
-            const pasosVistos = new Set(colaPasos.map(normalizarPasoTexto));
-            const pasosFallidos = new Map();
-            let ejecucionFallida = false;
-
-            const ejecutarMovimientoGuiado = async (destino) => {
-                const limiteIntentos = 4;
-
-                for (let intento = 0; intento < limiteIntentos; intento += 1) {
-                    const origen = estadoSimulado?.moduloActual;
-                    if (!origen || origen === destino) {
-                        return true;
+                if (dato.type === 'plan') {
+                    setLog((prev) => `${prev}\nPlan generado (${dato.plan.length} pasos)`);
+                } else if (dato.type === 'log') {
+                    setLog((prev) => `${prev}\n${dato.message}`);
+                } else if (dato.type === 'step') {
+                    const textoPaso = dato.paso || (dato.descripcion || 'Accion');
+                    setForzarGanePasoActual(textoPaso);
+                    const linea = dato.ok ? (dato.out || `OK: ${dato.accion}`) : (`ERROR (${dato.accion}): ${dato.out}`);
+                    // Evitar ruido repetido de bienvenida impresa por Prolog
+                    if (!/Bienvenido a la Estaci[oó]n Atlas/i.test(linea)) {
+                        setLog((prev) => `${prev}\n${linea}`);
                     }
-
-                    const rutas = await apiService.obtenerRutas(origen, destino);
-                    if (!Array.isArray(rutas) || rutas.length === 0) {
-                        setLog(`Computadora: no encontró ruta desde ${formatNombre(origen)} hasta ${formatNombre(destino)}. Retrocediendo y recalculando...`);
-                        return false;
-                    }
-
-                    let seMovio = false;
-
-                    for (const ruta of rutas) {
-                        const camino = Array.isArray(ruta) ? ruta.filter(Boolean) : [];
-                        if (camino.length < 2) {
-                            continue;
+                    // Si el backend incluye el estado del juego, actualizar UI en vivo
+                    if (dato.estado) {
+                        try {
+                            const estadoParseado = parsearEstadoProlog(dato.estado);
+                            if (estadoParseado) setEstado(estadoParseado);
+                        } catch (e) {
+                            // ignore parse errors
                         }
-
-                        let estadoTemporal = estadoSimulado;
-                        let rutaExitosa = true;
-
-                        for (const siguienteModulo of camino.slice(1)) {
-                            setLog(`Computadora: Ir a ${formatNombre(siguienteModulo)}`);
-                            await new Promise((resolve) => window.setTimeout(resolve, 550));
-
-                            const respuestaMovimiento = await apiService.enviarComando('mover', siguienteModulo);
-                            const salidaMovimiento = limpiarErrorVisible(respuestaMovimiento.out || '');
-
-                            if (!respuestaMovimiento.estado) {
-                                rutaExitosa = false;
-                                setLog(salidaMovimiento || `No se pudo avanzar hacia ${formatNombre(siguienteModulo)}.`);
-                                reproducirEfecto('error');
-                                break;
-                            }
-
-                            estadoTemporal = respuestaMovimiento.estado;
-                            estadoSimulado = respuestaMovimiento.estado;
-                            setEstado(respuestaMovimiento.estado);
-                            setLog(salidaMovimiento || `Te moviste a ${formatNombre(siguienteModulo)}.`);
-                            reproducirEfecto('ok');
-                            await evaluarVictoria();
-                            await new Promise((resolve) => window.setTimeout(resolve, 350));
-                        }
-
-                        if (rutaExitosa) {
-                            seMovio = true;
-                            estadoSimulado = estadoTemporal;
-                            break;
-                        }
-
-                        setLog(`Computadora: ruta bloqueada hacia ${formatNombre(destino)}. Retrocediendo y probando otra alternativa...`);
                     }
+                    if (!dato.ok) reproducirEfecto('error');
+                } else if (dato.type === 'error') {
+                    setLog((prev) => `${prev}\n${dato.message}`);
+                    reproducirEfecto('error');
+                } else if (dato.type === 'end') {
+                    // estado final
+                    (async () => {
+                        const estadoActualizado = await actualizarEstado();
+                        const gano = await evaluarVictoria();
+                        const pendientesDerivados = crearPendientesGuiadosDesdeEstado(estadoActualizado || estado, conexiones);
+                        setForzarGaneResultado(
+                            gano
+                                ? { tipo: 'success', texto: 'Ya puedes seguir con Forzar Gane.' }
+                                : { tipo: 'warning', texto: 'La solución está en proceso. Continuando automáticamente con lo pendiente.' }
+                        );
+                        setForzarGanePendientes(pendientesDerivados);
 
-                    if (seMovio) {
-                        return true;
-                    }
-
-                    await actualizarEstado();
-                    estadoSimulado = await apiService.obtenerEstado();
-                    setEstado(estadoSimulado);
+                        if (!gano && pendientesDerivados.length > 0 && forzarGaneRondasRef.current < 4) {
+                            forzarGaneRondasRef.current += 1;
+                            setLog((prev) => `${prev}\nContinuando con Forzar Gane...`);
+                            window.setTimeout(() => {
+                                handleForzarGane({ auto: true });
+                            }, 450);
+                        }
+                    })();
+                    setForzarGaneEnCurso(false);
+                    setForzarGanePasoActual('');
+                    reproducirEfecto('ok');
+                    if (es) { es.close(); es = null; }
                 }
-
-                return false;
             };
 
-            const replanificarDesdeEstadoActual = async () => {
-                const ayuda = await apiService.solicitarAyuda();
-                const pasosAyuda = extraerPasosForzarGane(ayuda.out || '');
-                const pasosLocales = generarPasosLocales(estadoSimulado);
-
-                agregarPasosUnicos(colaPasos, pasosLocales, pasosVistos);
-
-                if (pasosAyuda.length === 0) {
-                    return pasosLocales.length > 0;
-                }
-
-                const nuevosPasos = pasosAyuda.filter((paso) => !pasosVistos.has(normalizarPasoTexto(paso)));
-
-                if (nuevosPasos.length === 0) {
-                    return pasosLocales.length > 0;
-                }
-
-                setLog(`Computadora: recalculando ruta desde ${formatNombre(estadoSimulado?.moduloActual)}...`);
-                agregarPasosUnicos(colaPasos, nuevosPasos, pasosVistos);
-                return true;
+            es.onerror = (err) => {
+                setLog((prev) => `${prev}\n[STREAM] Error de conexión con el servidor.`);
+                setForzarGaneEnCurso(false);
+                setForzarGanePasoActual('');
+                if (es) { es.close(); es = null; }
             };
 
-            while (colaPasos.length > 0) {
-                agregarPasosPrioritarios(colaPasos, generarPasosLocales(estadoSimulado), pasosVistos);
-                const paso = colaPasos.shift();
-                const textoPasoNormalizado = normalizarPasoTexto(paso);
-                const intentosPaso = pasosFallidos.get(textoPasoNormalizado) || 0;
-
-                if (intentosPaso >= 3) {
-                    setLog(`Computadora: descartando temporalmente "${paso}" tras varios intentos fallidos.`);
-                    continue;
-                }
-
-                setForzarGanePasoActual(`Procesando: ${paso}`);
-
-                const acciones = convertirPasoEnAcciones(paso, estadoSimulado);
-                if (acciones.length === 0) {
-                    setLog(`Computadora: ${paso}`);
-                    continue;
-                }
-
-                for (const accion of acciones) {
-                    if (esPasoMovimiento(accion)) {
-                        const okMovimiento = await ejecutarMovimientoGuiado(accion.valor);
-                        if (!okMovimiento) {
-                            const nuevosIntentos = (pasosFallidos.get(textoPasoNormalizado) || 0) + 1;
-                            pasosFallidos.set(textoPasoNormalizado, nuevosIntentos);
-                            setLog(`Computadora: no pudo llegar a ${formatNombre(accion.valor)} desde ${formatNombre(estadoSimulado?.moduloActual)}. Revisando el módulo actual...`);
-                            reproducirEfecto('error');
-                            agregarPasosPrioritarios(colaPasos, generarPasosLocales(estadoSimulado), pasosVistos);
-                            const replanificado = await replanificarDesdeEstadoActual();
-                            if (nuevosIntentos < 3) {
-                                colaPasos.push(paso);
-                            }
-                            if (!replanificado && colaPasos.length === 0) {
-                                setLog(`Computadora: no hay más ramas para probar desde ${formatNombre(estadoSimulado?.moduloActual)}.`);
-                            }
-                            break;
-                        }
-                        continue;
-                    }
-
-                    try {
-                        setLog(`Computadora: ${accion.descripcion}`);
-                        await new Promise((resolve) => window.setTimeout(resolve, 650));
-
-                        const respuestaAccion = await apiService.enviarComando(accion.tipo, accion.valor);
-                        const salidaAccion = limpiarErrorVisible(respuestaAccion.out || `Acción ejecutada: ${accion.descripcion}`);
-                        setLog(salidaAccion);
-
-                        if (respuestaAccion.estado) {
-                            estadoSimulado = respuestaAccion.estado;
-                            setEstado(respuestaAccion.estado);
-                        } else {
-                            await actualizarEstado();
-                            estadoSimulado = await apiService.obtenerEstado();
-                            setEstado(estadoSimulado);
-                        }
-
-                        reproducirEfecto('ok');
-                        await evaluarVictoria();
-                        await new Promise((resolve) => window.setTimeout(resolve, 450));
-                    } catch (errorAccion) {
-                        const mensajeError = limpiarErrorVisible(errorAccion?.message || `No se pudo ejecutar ${accion.descripcion}`);
-                        const nuevosIntentos = (pasosFallidos.get(textoPasoNormalizado) || 0) + 1;
-                        pasosFallidos.set(textoPasoNormalizado, nuevosIntentos);
-                        setLog(`${mensajeError} Revisando el módulo actual...`);
-                        reproducirEfecto('error');
-
-                        agregarPasosPrioritarios(colaPasos, generarPasosLocales(estadoSimulado), pasosVistos);
-                        const replanificado = await replanificarDesdeEstadoActual();
-                        if (nuevosIntentos < 3) {
-                            colaPasos.push(paso);
-                        }
-                        if (!replanificado && colaPasos.length === 0) {
-                            setLog(`Computadora: no hay más ramas para probar desde ${formatNombre(estadoSimulado?.moduloActual)}.`);
-                        }
-                        break;
-                    }
-                }
-
-            }
-
-            if (ejecucionFallida) {
-                return;
-            }
-
-            setForzarGanePasoActual('Simulación completa. Verificando victoria...');
-            await evaluarVictoria();
-            setForzarGaneResultado({
-                tipo: 'success',
-                texto: 'Sí hay solución. La computadora ejecutó la secuencia sugerida en vivo.'
-            });
         } catch (e) {
-            const mensajeError = e?.message || '';
-            const texto = /<!DOCTYPE|<html/i.test(mensajeError)
-                ? mensajeFallback
-                : limpiarErrorVisible(mensajeError || mensajeFallback);
-            setForzarGaneResultado({ tipo: 'warning', texto });
-            setLog(texto);
-            reproducirEfecto('error');
-        } finally {
+            setLog((prev) => `${prev}\nNo se pudo iniciar la ejecución en vivo.`);
             setForzarGaneEnCurso(false);
             setForzarGanePasoActual('');
+            reproducirEfecto('error');
+            if (es) { es.close(); es = null; }
         }
-    }, [bloqueoGeneral, estado, actualizarEstado, iniciarAudioAmbiente, reproducirEfecto, evaluarVictoria, limpiarErrorVisible]);
+    }, [bloqueoGeneral, actualizarEstado, iniciarAudioAmbiente, reproducirEfecto, evaluarVictoria, limpiarErrorVisible]);
 
     //Guardar / Cargar--------------------------------------------------------------------------------
     const handleGuardar = useCallback(async () => {
@@ -1094,12 +982,40 @@ function Game() {
                             {forzarGaneResultado && (
                                 <div className={`force-win-result ${forzarGaneResultado.tipo}`}>
                                     <span className="force-win-result-label">
-                                        {forzarGaneResultado.tipo === 'warning' ? 'Sin solución' : 'Solución encontrada'}
+                                        {forzarGaneResultado.tipo === 'warning' ? 'Solución en proceso' : 'Solución encontrada'}
                                     </span>
                                     <span className="force-win-result-text">{forzarGaneResultado.texto}</span>
-                                        {forzarGaneEnCurso && forzarGanePasoActual && (
-                                            <span className="force-win-result-text">{forzarGanePasoActual}</span>
-                                        )}
+                                    {!victoria && forzarGaneResultado.tipo === 'warning' && (
+                                        <div className="force-win-next-steps">
+                                            <strong>La computadora sigue con esto:</strong>
+                                            {Array.isArray(forzarGanePendientes) && forzarGanePendientes.length > 0 ? (
+                                                <div className="force-win-next-steps-list">
+                                                    {forzarGanePendientes.map((pendiente, indice) => {
+                                                        const rutaTexto = formatearRuta(pendiente.ruta);
+                                                        return (
+                                                            <div className="force-win-pending-card" key={`${pendiente.accion}-${indice}`}>
+                                                                <div className="force-win-pending-top">
+                                                                    <span className="force-win-pending-index">{String(indice + 1).padStart(2, '0')}</span>
+                                                                    <div className="force-win-pending-copy">
+                                                                        <strong>{pendiente.accion}</strong>
+                                                                        <span>{pendiente.modulo ? `Destino: ${formatNombre(pendiente.modulo)}` : 'Destino no definido'}</span>
+                                                                    </div>
+                                                                </div>
+                                                                {rutaTexto && rutaTexto !== formatNombre(estado?.moduloActual) && (
+                                                                    <div className="force-win-pending-route">Retrocede / avanza: {rutaTexto}</div>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            ) : (
+                                                <div className="force-win-result-text">Buscando la siguiente acción automática.</div>
+                                            )}
+                                        </div>
+                                    )}
+                                    {forzarGaneEnCurso && forzarGanePasoActual && (
+                                        <span className="force-win-result-text">{forzarGanePasoActual}</span>
+                                    )}
                                 </div>
                             )}
                         </div>

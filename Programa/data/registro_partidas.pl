@@ -1,0 +1,10 @@
+partida_registro('Yeler',0,'data/partida_Yeler_0.sav',finalizada).
+partida_registro('Ali',1,'data/partida_Ali_1.sav',finalizada).
+partida_registro('Candy',2,'data/partida_Candy_2.sav',pendiente).
+partida_registro('Wil',3,'data/partida_Wil_3.sav',finalizada).
+partida_registro('Ali',4,'data/partida_Ali_4.sav',finalizada).
+partida_registro('Susana',5,'data/partida_Susana_5.sav',finalizada).
+partida_registro('Allison',6,'data/partida_Allison_6.sav',finalizada).
+partida_registro('Sana',7,'data/partida_Sana_7.sav',finalizada).
+partida_registro('Wal',8,'data/partida_Wal_8.sav',finalizada).
+partida_registro('Ali',9,'data/partida_Ali_9.sav',finalizada).
