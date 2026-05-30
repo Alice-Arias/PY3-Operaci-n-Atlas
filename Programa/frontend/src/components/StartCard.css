@@ -10,15 +10,7 @@
     overflow: hidden;
 
     /* Fondo tipo vidrio más real */
-    background: rgba(11, 17, 32, 0.82);
-    backdrop-filter: blur(14px);
-
-    border: 1px solid rgba(0, 180, 255, 0.18);
-
-    /* sombra más profunda */
-    box-shadow:
-        0 10px 40px rgba(0, 0, 0, 0.6),
-        inset 0 0 20px rgba(255, 255, 255, 0.03);
+    background: transparent;
 }
 
 /* Glow superior más sci-fi */
@@ -30,15 +22,6 @@
     transform: translateX(-50%);
     width: 85%;
     height: 2px;
-
-    background: linear-gradient(
-        90deg,
-        transparent,
-        rgba(255, 255, 255, 0.25),
-        transparent
-    );
-
-    box-shadow: 0 0 12px rgba(255, 255, 255, 0.15);
 }
 
 /* =========================
@@ -54,8 +37,9 @@
 
     background: rgba(0, 0, 0, 0.35);
     color: rgba(255, 255, 255, 0.95);
+    text-align: center;
 
-    font-size: 0.95rem;
+    font-size: 0.75rem;
     letter-spacing: 0.15rem;
 
     outline: none;
