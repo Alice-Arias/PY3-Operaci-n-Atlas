@@ -2,6 +2,12 @@ import { parsearConexionesProlog, parsearEstadoProlog, parsearRegistroProlog, pa
 
 const BASE_URL = 'http://localhost:3000/api';
 
+// Nombre: manejarRespuesta/1
+// Descripcion: convierte la respuesta HTTP en datos o en un error util.
+// Entrada: respuesta fetch.
+// Salida: objeto JSON parseado o lanza una excepcion con mensaje legible.
+// Restricciones: diferencia entre JSON y texto plano segun el content-type.
+// Objetivo: estandarizar el manejo de respuestas del backend.
 async function manejarRespuesta(res) {
     const contentType = res.headers.get('content-type') || '';
 
@@ -163,6 +169,12 @@ export const apiService = {
     }
 };
 
+// Nombre: parsearRutasAnidadas/1
+// Descripcion: convierte la salida anidada de rutas en una lista limpia de caminos.
+// Entrada: texto con rutas Prolog.
+// Salida: arreglo de rutas no vacias.
+// Restricciones: depende de `parsearListaAnidada/1`.
+// Objetivo: normalizar rutas para el mapa y las sugerencias.
 function parsearRutasAnidadas(texto) {
     const rutas = parsearListaAnidada(texto);
     return rutas
@@ -170,6 +182,12 @@ function parsearRutasAnidadas(texto) {
         .filter((ruta) => ruta.length > 0);
 }
 
+// Nombre: parsearListaAnidada/1
+// Descripcion: separa listas anidadas en JavaScript sin romper sublistas.
+// Entrada: texto con sintaxis de lista Prolog.
+// Salida: arreglo con listas internas o elementos limpios.
+// Restricciones: asume corchetes balanceados.
+// Objetivo: leer respuestas complejas del motor Prolog.
 function parsearListaAnidada(texto) {
     if (!texto || typeof texto !== 'string') return [];
 
@@ -210,6 +228,12 @@ function parsearListaAnidada(texto) {
     });
 }
 
+// Nombre: limpiarElementoLocal/1
+// Descripcion: elimina comillas externas de un texto recibido desde Prolog.
+// Entrada: texto a limpiar.
+// Salida: string sin comillas externas o el valor original.
+// Restricciones: no hace sanitizacion completa.
+// Objetivo: simplificar la presentacion de resultados en UI.
 function limpiarElementoLocal(texto) {
     if (!texto || typeof texto !== 'string') return texto;
     const valor = texto.trim();

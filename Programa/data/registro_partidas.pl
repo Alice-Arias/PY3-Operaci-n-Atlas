@@ -8,3 +8,5 @@ partida_registro('Allison',6,'data/partida_Allison_6.sav',finalizada).
 partida_registro('Sana',7,'data/partida_Sana_7.sav',finalizada).
 partida_registro('Wal',8,'data/partida_Wal_8.sav',finalizada).
 partida_registro('Ali',9,'data/partida_Ali_9.sav',finalizada).
+partida_registro('Ali',10,'data/partida_Ali_10.sav',finalizada).
+partida_registro('Ali',11,'data/partida_Ali_11.sav',finalizada).

@@ -7,11 +7,23 @@ import TerminalConsole from '../components/game/TerminalConsole';
 import { apiService } from '../services/api';
 import { parsearEstadoProlog } from '../services/parserProlog';
 
+// Nombre: formatNombre/1
+// Descripcion: convierte nombres internos en texto legible para la UI.
+// Entrada: texto con guiones bajos.
+// Salida: cadena con espacios y capitalizacion inicial.
+// Restricciones: solo transforma texto simple.
+// Objetivo: mostrar modulos, tripulantes y artefactos de forma amigable.
 function formatNombre(nombre) {
     if (!nombre) return '';
     return nombre.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
+// Nombre: formatTimer/1
+// Descripcion: convierte segundos acumulados en una cadena de tiempo legible.
+// Entrada: cantidad de segundos.
+// Salida: formato `mm:ss` o `hh:mm:ss`.
+// Restricciones: espera un entero no negativo.
+// Objetivo: mostrar la duracion de la partida y la bitacora.
 function formatTimer(segundos) {
     const h = Math.floor(segundos / 3600);
     const m = Math.floor((segundos % 3600) / 60);
@@ -48,6 +60,12 @@ const ARTEFACTO_FALLBACK_EMOJIS = [
 '⚡', '💡', '🧠', '📁', '🗂️', '📝', '🧭', '🎛️',
 '🧵', '🪙', '🏗️', '🧼', '🧠', '🕹️', '⌨️', '🖱️'
 ];
+// Nombre: normalizarClave/1
+// Descripcion: elimina acentos y normaliza texto para comparaciones de clave.
+// Entrada: valor textual.
+// Salida: string en minusculas sin diacriticos.
+// Restricciones: solo normaliza texto, no valida contenido.
+// Objetivo: comparar nombres de forma robusta en iconos y buscadores.
 function normalizarClave(valor) {
     if (!valor) return '';
     return valor
@@ -58,6 +76,12 @@ function normalizarClave(valor) {
         .trim();
 }
 
+// Nombre: hashTexto/1
+// Descripcion: genera un hash sencillo para seleccionar iconos de respaldo.
+// Entrada: texto a hashear.
+// Salida: numero entero sin signo.
+// Restricciones: algoritmo simple, no criptografico.
+// Objetivo: escoger de forma estable un emoji de reserva.
 function hashTexto(texto) {
     let hash = 0;
     for (let i = 0; i < texto.length; i += 1) {
@@ -66,6 +90,12 @@ function hashTexto(texto) {
     return hash;
 }
 
+// Nombre: getArtefactoIcon/1
+// Descripcion: resuelve el icono visual de un artefacto.
+// Entrada: nombre del artefacto.
+// Salida: emoji representativo.
+// Restricciones: usa reglas fijas y una lista de respaldo.
+// Objetivo: dar una lectura visual rapida de los objetos del juego.
 function getArtefactoIcon(nombre) {
     const clave = normalizarClave(nombre);
     if (!clave) return '🔩';
@@ -78,6 +108,12 @@ function getArtefactoIcon(nombre) {
     return ARTEFACTO_FALLBACK_EMOJIS[hashTexto(clave) % ARTEFACTO_FALLBACK_EMOJIS.length];
 }
 
+// Nombre: normalizarEstadoTexto/1
+// Descripcion: normaliza estados como rescatado o restaurado para comparar texto.
+// Entrada: texto del estado.
+// Salida: string normalizado sin acentos ni mayusculas.
+// Restricciones: no interpreta estados fuera de texto simple.
+// Objetivo: comparar estados de forma uniforme.
 function normalizarEstadoTexto(valor) {
     if (!valor) return '';
     return valor
@@ -97,12 +133,24 @@ const CREW_EMOJIS = [
 '🧑‍🎤', '👨‍🎤', '👩‍🎤', '🧙‍♂️', '🧙‍♀️', '🦸‍♂️',
 '🦸‍♀️', '🧝‍♂️', '🧝‍♀️', '🤖', 
 ];
+// Nombre: estadoAClase/1
+// Descripcion: traduce un estado narrativo a una clase CSS.
+// Entrada: estado del tripulante.
+// Salida: clase `rescued` o `trapped`.
+// Restricciones: solo distingue dos estados visuales.
+// Objetivo: pintar la tripulacion con una apariencia consistente.
 function estadoAClase(estado) {
     const n = normalizarEstadoTexto(estado);
     if (n === 'rescatado' || n === 'rescued') return 'rescued';
     return 'trapped';
 }
 
+// Nombre: extraerPasosForzarGane/1
+// Descripcion: extrae pasos numerados desde un texto de ayuda.
+// Entrada: texto multilínea.
+// Salida: arreglo de pasos limpios.
+// Restricciones: solo reconoce lineas numeradas.
+// Objetivo: convertir la ayuda textual en una lista accionable.
 function extraerPasosForzarGane(texto) {
     if (!texto) return [];
 
@@ -113,6 +161,12 @@ function extraerPasosForzarGane(texto) {
         .map((linea) => linea.replace(/^\d+\.\s+/, '').trim())
         .filter(Boolean);
 }
+// Nombre: convertirPasoEnAcciones/2
+// Descripcion: traduce un paso de ayuda en acciones concretas de la UI.
+// Entrada: paso textual y estado actual.
+// Salida: lista de acciones con tipo, valor y descripcion.
+// Restricciones: solo reconoce patrones de paso ya definidos.
+// Objetivo: automatizar la ejecucion manual de sugerencias.
 function convertirPasoEnAcciones(paso, estadoActual) {
     const texto = String(paso || '').trim();
     if (!texto) return [];
@@ -168,6 +222,12 @@ function convertirPasoEnAcciones(paso, estadoActual) {
     return [];
 }
 
+// Nombre: obtenerSugerenciasPendientesDesdeEstado/1
+// Descripcion: genera sugerencias cortas a partir del estado actual.
+// Entrada: estado actual de la partida.
+// Salida: arreglo de sugerencias prioritarias.
+// Restricciones: limita el total de sugerencias devueltas.
+// Objetivo: orientar al jugador hacia las tareas que faltan.
 function obtenerSugerenciasPendientesDesdeEstado(estadoActual) {
     if (!estadoActual) return [];
 
@@ -197,6 +257,12 @@ function obtenerSugerenciasPendientesDesdeEstado(estadoActual) {
     return [...new Set(sugerencias)].filter(Boolean).slice(0, 6);
 }
 
+// Nombre: construirGrafoBidireccional/1
+// Descripcion: transforma una lista de conexiones en un grafo no dirigido.
+// Entrada: arreglo de conexiones.
+// Salida: Map con vecindades bidireccionales.
+// Restricciones: ignora conexiones incompletas.
+// Objetivo: reutilizar la estructura para busqueda de rutas.
 function construirGrafoBidireccional(conexiones) {
     const grafo = new Map();
 
@@ -211,6 +277,12 @@ function construirGrafoBidireccional(conexiones) {
     return grafo;
 }
 
+// Nombre: buscarRutaMasCorta/3
+// Descripcion: encuentra el camino mas corto entre dos modulos.
+// Entrada: origen, destino y conexiones.
+// Salida: arreglo con la ruta o vacio si no existe.
+// Restricciones: usa busqueda en anchura sobre el grafo bidireccional.
+// Objetivo: sugerir desplazamientos rapidos al jugador.
 function buscarRutaMasCorta(origen, destino, conexiones) {
     if (!origen || !destino) return [];
     if (origen === destino) return [origen];
@@ -236,11 +308,23 @@ function buscarRutaMasCorta(origen, destino, conexiones) {
     return [];
 }
 
+// Nombre: formatearRuta/1
+// Descripcion: convierte una ruta en un texto con flechas.
+// Entrada: arreglo de modulos.
+// Salida: cadena legible para mostrar en pantalla.
+// Restricciones: requiere una lista no vacia.
+// Objetivo: presentar las rutas con una lectura mas visual.
 function formatearRuta(ruta) {
     if (!Array.isArray(ruta) || ruta.length === 0) return '';
     return ruta.map((item) => formatNombre(item)).join(' → ');
 }
 
+// Nombre: crearPendientesGuiadosDesdeEstado/2
+// Descripcion: construye tareas guiadas a partir del estado y las conexiones.
+// Entrada: estado actual y lista de conexiones.
+// Salida: arreglo de pendientes con ruta sugerida.
+// Restricciones: limita el resultado a un conjunto pequeno de sugerencias.
+// Objetivo: orientar al jugador hacia objetivos concretos.
 function crearPendientesGuiadosDesdeEstado(estadoActual, conexiones) {
     if (!estadoActual) return [];
 
@@ -283,7 +367,12 @@ function crearPendientesGuiadosDesdeEstado(estadoActual, conexiones) {
 // Nota: la generación y ejecución del plan fue movida al backend Prolog.
 // El frontend ahora solicita el plan/ejecución al controlador y muestra resultados.
 
-//Componente principal--------------------------------------------------------------------------------
+// Nombre: Game
+// Descripcion: pantalla principal de la partida con mapa, paneles y bitacora.
+// Entrada: lee el estado de la ruta actual y datos de navegacion.
+// Salida: interfaz completa de juego interactivo.
+// Restricciones: depende del backend para estado, acciones y ayuda.
+// Objetivo: concentrar toda la experiencia jugable en una sola vista.
 function Game() {
     const location   = useLocation();
     const navigate = useNavigate();
@@ -322,6 +411,12 @@ function Game() {
     }, []);
 
     //Timer de misión--------------------------------------------------------------------------------
+    // Nombre: sincronizarBitacora/1
+    // Descripcion: copia el log recibido a la bitacora visible de la partida.
+    // Entrada: texto de log y contador de tiempo.
+    // Salida: lista de lineas acumuladas en el historial visual.
+    // Restricciones: evita duplicar mensajes consecutivos iguales.
+    // Objetivo: conservar una cronologia legible de la sesion.
     useEffect(() => {
         timerRef.current = setInterval(() => setTimer(t => t + 1), 1000);
         return () => clearInterval(timerRef.current);
@@ -355,6 +450,12 @@ function Game() {
         });
     }, [log, timer]);
 
+    // Nombre: obtenerAudioContexto/0
+    // Descripcion: crea o reutiliza el contexto de audio del navegador.
+    // Entrada: no recibe datos.
+    // Salida: instancia de AudioContext o null si no esta disponible.
+    // Restricciones: solo funciona en navegadores con Web Audio API.
+    // Objetivo: centralizar el acceso al motor de sonido.
     const obtenerAudioContexto = useCallback(() => {
         if (audioContextRef.current) return audioContextRef.current;
         const ContextoAudio = window.AudioContext || window.webkitAudioContext;
@@ -364,6 +465,12 @@ function Game() {
         return contexto;
     }, []);
 
+    // Nombre: iniciarAudioAmbiente/0
+    // Descripcion: inicia el zumbido ambiental de fondo de la interfaz.
+    // Entrada: no recibe datos.
+    // Salida: un oscilador persistente con volumen bajo.
+    // Restricciones: se ejecuta una sola vez mientras no exista audio activo.
+    // Objetivo: dar atmosfera sonora al juego.
     const iniciarAudioAmbiente = useCallback(async () => {
         if (audioAmbienteRef.current) return;
 
@@ -398,6 +505,12 @@ function Game() {
         iniciarAudioAmbiente();
     }, [iniciarAudioAmbiente]);
 
+    // Nombre: reproducirEfecto/1
+    // Descripcion: reproduce un efecto breve de acierto o error.
+    // Entrada: tipo de efecto.
+    // Salida: un beep corto con envolvente suave.
+    // Restricciones: depende de que el contexto de audio este activo.
+    // Objetivo: reforzar con sonido las respuestas del sistema.
     const reproducirEfecto = useCallback(async (tipo) => {
         const contexto = obtenerAudioContexto();
         if (!contexto) return;
@@ -429,6 +542,12 @@ function Game() {
         oscilador.stop(ahora + 0.23);
     }, [obtenerAudioContexto]);
 
+    // Nombre: reproducirAplausos/0
+    // Descripcion: reproduce una secuencia sonora de celebracion al ganar.
+    // Entrada: no recibe datos.
+    // Salida: serie de notas breves escalonadas.
+    // Restricciones: requiere contexto de audio disponible.
+    // Objetivo: reforzar el cierre victorioso de la partida.
     const reproducirAplausos = useCallback(async () => {
         const contexto = obtenerAudioContexto();
         if (!contexto) return;
@@ -460,6 +579,12 @@ function Game() {
         });
     }, [obtenerAudioContexto]);
 
+    // Nombre: evaluarVictoria/0
+    // Descripcion: consulta al backend si la partida ya cumplio la victoria.
+    // Entrada: no recibe datos.
+    // Salida: verdadero cuando la victoria ya fue detectada.
+    // Restricciones: solo cambia el estado visual cuando Prolog confirma la victoria.
+    // Objetivo: detectar automaticamente el final de la mision.
     const evaluarVictoria = useCallback(async () => {
         if (victoria) return true;
 
@@ -490,6 +615,12 @@ function Game() {
     }, [victoria, reproducirAplausos]);
 
     //Carga inicial--------------------------------------------------------------------------------
+    // Nombre: cargarDatos/0
+    // Descripcion: carga modulos, estado, conexiones y descripciones desde el backend.
+    // Entrada: no recibe datos.
+    // Salida: llena el estado local con la informacion inicial del juego.
+    // Restricciones: depende de que el backend responda al menos parcialmente.
+    // Objetivo: preparar la partida antes de interactuar.
     const cargarDatos = useCallback(async () => {
         const [resultadoModulos, resultadoEstado, resultadoConexiones, resultadoModulosInfo] = await Promise.allSettled([
             apiService.obtenerModulos(),
@@ -522,8 +653,20 @@ function Game() {
         await evaluarVictoria();
     }, [evaluarVictoria]);
 
+    // Nombre: ejecutarCargaInicial/0
+    // Descripcion: dispara la carga inicial del juego cuando el componente monta.
+    // Entrada: no recibe datos.
+    // Salida: inicia la recuperacion de datos iniciales.
+    // Restricciones: solo corre una vez por montaje del componente.
+    // Objetivo: arrancar la partida con informacion actualizada.
     useEffect(() => { cargarDatos(); }, [cargarDatos]);
 
+    // Nombre: habilitarAudioConInteraccion/0
+    // Descripcion: desbloquea el audio del navegador tras la primera interaccion.
+    // Entrada: un evento de puntero.
+    // Salida: activa el audio ambiente si el navegador lo habia suspendido.
+    // Restricciones: depende de la politica de autoplay del navegador.
+    // Objetivo: evitar que el sonido quede bloqueado al cargar.
     useEffect(() => {
         const desbloquearAudio = () => {
             iniciarAudioAmbiente();
@@ -534,6 +677,12 @@ function Game() {
     }, [iniciarAudioAmbiente]);
 
     //Actualizar solo estado--------------------------------------------------------------------------------
+    // Nombre: actualizarEstado/0
+    // Descripcion: refresca el estado de la partida desde el backend.
+    // Entrada: no recibe datos.
+    // Salida: nuevo estado o null si falla la consulta.
+    // Restricciones: no altera otros datos del componente.
+    // Objetivo: sincronizar la UI cuando el backend cambia el estado.
     const actualizarEstado = useCallback(async () => {
         try {
             const estadoActual = await apiService.obtenerEstado();
@@ -546,6 +695,12 @@ function Game() {
     }, []);
 
     //Manejar acciones del jugador--------------------------------------------------------------------------------
+    // Nombre: handleAccion/2
+    // Descripcion: ejecuta una accion del jugador y refresca la interfaz.
+    // Entrada: tipo de accion y valor asociado.
+    // Salida: actualizacion de estado, log y feedback sonoro.
+    // Restricciones: bloquea la ejecucion si ya hay otra accion en curso.
+    // Objetivo: concentrar el flujo de movimiento, toma, rescate o reparacion.
     const handleAccion = useCallback(async (tipo, valor) => {
         if (!tipo || bloqueoGeneral) return;
         setCargando(true);
@@ -577,6 +732,12 @@ function Game() {
     }, [bloqueoGeneral, actualizarEstado, iniciarAudioAmbiente, reproducirEfecto, evaluarVictoria]);
 
     //Ayuda de la computadora--------------------------------------------------------------------------------
+    // Nombre: handleAyuda/0
+    // Descripcion: solicita la ayuda de la computadora de a bordo.
+    // Entrada: no recibe datos.
+    // Salida: log actualizado con sugerencias o error.
+    // Restricciones: respeta el bloqueo general de la interfaz.
+    // Objetivo: dar acceso rapido a la guia del sistema.
     const handleAyuda = useCallback(async () => {
         if (bloqueoGeneral) return;
         setCargando(true);
@@ -597,6 +758,12 @@ function Game() {
         }
     }, [bloqueoGeneral, iniciarAudioAmbiente, reproducirEfecto, evaluarVictoria, limpiarErrorVisible]);
 
+    // Nombre: handleForzarGane/1
+    // Descripcion: ejecuta el flujo de ayuda automatica para resolver la partida.
+    // Entrada: opciones de ejecucion, como modo automatico.
+    // Salida: actualizaciones de progreso, pasos y resultados de la solucion.
+    // Restricciones: evita reentradas mientras el plan este en curso.
+    // Objetivo: automatizar la resolucion de los objetivos pendientes.
     const handleForzarGane = useCallback(async (opciones = {}) => {
         const { auto = false } = opciones;
         if (bloqueoGeneral) return;
@@ -691,6 +858,12 @@ function Game() {
     }, [bloqueoGeneral, actualizarEstado, iniciarAudioAmbiente, reproducirEfecto, evaluarVictoria, limpiarErrorVisible]);
 
     //Guardar / Cargar--------------------------------------------------------------------------------
+    // Nombre: handleGuardar/0
+    // Descripcion: guarda la partida actual en el backend.
+    // Entrada: no recibe datos.
+    // Salida: log de exito o error y feedback sonoro.
+    // Restricciones: depende de que el backend pueda persistir la mision.
+    // Objetivo: conservar el progreso del jugador.
     const handleGuardar = useCallback(async () => {
         try {
             iniciarAudioAmbiente();
@@ -703,6 +876,12 @@ function Game() {
         }
     }, [iniciarAudioAmbiente, reproducirEfecto]);
 
+    // Nombre: handleVerBitacora/0
+    // Descripcion: abre la vista de bitacora historica de la partida.
+    // Entrada: no recibe datos.
+    // Salida: activa el panel de historial y su carga visual.
+    // Restricciones: mantiene el bloqueo visual mientras prepara la vista.
+    // Objetivo: permitir revisar el registro de eventos de la partida.
     const handleVerBitacora = useCallback(async () => {
         try {
             setCargandoBitacora(true);
@@ -717,6 +896,12 @@ function Game() {
         }
     }, [iniciarAudioAmbiente, reproducirEfecto]);
 
+    // Nombre: handleOtraPartida/0
+    // Descripcion: vuelve a la pantalla inicial para empezar otra sesion.
+    // Entrada: no recibe datos.
+    // Salida: navega al inicio y limpia la vista principal.
+    // Restricciones: usa recarga de ubicacion para reiniciar el flujo.
+    // Objetivo: cerrar la partida actual y volver al menu principal.
     const handleOtraPartida = useCallback(() => {
         setVictoria(false);
         setMostrarBitacora(false);
@@ -724,6 +909,12 @@ function Game() {
         window.location.replace('/');
     }, []);
 
+    // Nombre: limpiarAudioAlSalir/0
+    // Descripcion: apaga y libera el audio al desmontar el componente.
+    // Entrada: no recibe datos.
+    // Salida: recursos de audio cerrados y referencias limpiadas.
+    // Restricciones: solo corre al salir de la pagina de juego.
+    // Objetivo: evitar fugas de audio entre partidas.
     useEffect(() => {
         return () => {
             if (audioAmbienteRef.current) {
@@ -744,6 +935,12 @@ function Game() {
     const moduloActual  = estado?.moduloActual || '—';
 
     //Calcular progreso general--------------------------------------------------------------------------------
+    // Nombre: calcularProgresoGeneral/1
+    // Descripcion: estima el avance global de la mision en porcentaje.
+    // Entrada: estado actual del juego.
+    // Salida: numero entre 0 y 100.
+    // Restricciones: usa sistemas, tripulantes, inventario y artefactos visibles.
+    // Objetivo: mostrar al jugador una referencia rapida de avance.
     const progreso = useMemo(() => {
         const sistemas   = Array.isArray(estado?.sistemas) ? estado.sistemas : [];
         const artefactosDisponibles = Array.isArray(estado?.artefactosDisponibles) ? estado.artefactosDisponibles : [];

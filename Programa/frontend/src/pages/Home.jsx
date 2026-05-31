@@ -2,6 +2,12 @@ import { useEffect } from 'react'
 import './Home.css'
 import StartCard from '../components/StartCard'
 
+// Nombre: Home
+// Descripcion: compone la pantalla inicial con portada y tarjeta de arranque.
+// Entrada: no recibe props.
+// Salida: vista de bienvenida y acceso a iniciar o continuar partida.
+// Restricciones: usa un efecto para reiniciar la posicion visual al entrar.
+// Objetivo: ofrecer una portada simple y clara antes de jugar.
 function Home() {
     useEffect(() => {
         window.scrollTo({ top: 0, left: 0, behavior: 'auto' })

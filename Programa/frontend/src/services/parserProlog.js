@@ -1,3 +1,9 @@
+// Nombre: limpiarElemento/1
+// Descripcion: elimina comillas externas de un elemento textual de Prolog.
+// Entrada: texto a limpiar.
+// Salida: cadena sin comillas externas o el valor original si no aplica.
+// Restricciones: solo quita una capa de comillas simples o dobles.
+// Objetivo: convertir salidas crudas de Prolog en texto legible.
 function limpiarElemento(texto) {
     if (!texto || typeof texto !== 'string') return texto;
     const valor = texto.trim();
@@ -7,6 +13,12 @@ function limpiarElemento(texto) {
     return valor;
 }
 
+// Nombre: dividirNivelSuperior/1
+// Descripcion: separa elementos de nivel superior sin romper listas anidadas.
+// Entrada: texto que contiene elementos separados por coma.
+// Salida: arreglo de fragmentos de nivel principal.
+// Restricciones: asume parentesis y corchetes balanceados.
+// Objetivo: permitir parsear estructuras complejas sin un parser completo.
 function dividirNivelSuperior(texto) {
     const elementos = [];
     let acumulado = '';
@@ -31,6 +43,12 @@ function dividirNivelSuperior(texto) {
     return elementos;
 }
 
+// Nombre: parsearListaProlog/1
+// Descripcion: convierte una lista textual de Prolog en un arreglo de JavaScript.
+// Entrada: texto con sintaxis de lista Prolog.
+// Salida: arreglo de elementos o lista vacia si no hay contenido.
+// Restricciones: solo entiende listas simples o anidadas por nivel superior.
+// Objetivo: unificar la lectura de listas que devuelve el backend.
 function parsearListaProlog(texto) {
     if (!texto || typeof texto !== 'string') return [];
 
@@ -45,6 +63,12 @@ function parsearListaProlog(texto) {
     return dividirNivelSuperior(contenido).map((item) => limpiarElemento(item));
 }
 
+// Nombre: parsearTerminos/3
+// Descripcion: convierte una lista de terminos Prolog en objetos JavaScript.
+// Entrada: texto, prefijo esperado y nombres de campos destino.
+// Salida: arreglo de objetos mapeados por campos.
+// Restricciones: solo acepta terminos que empiezan con el prefijo indicado.
+// Objetivo: transformar estructuras Prolog en registros faciles de usar en React.
 function parsearTerminos(texto, prefijo, campos) {
     const lista = parsearListaProlog(texto);
     return lista
@@ -64,6 +88,12 @@ function parsearTerminos(texto, prefijo, campos) {
         .filter(Boolean);
 }
 
+// Nombre: parsearEstadoProlog/1
+// Descripcion: reconstruye el estado completo de la partida desde la salida de Prolog.
+// Entrada: texto serializado que describe el estado.
+// Salida: objeto con modulo, inventario, sistemas, tripulacion y otros datos.
+// Restricciones: espera exactamente siete secciones internas.
+// Objetivo: entregar un objeto estable para la interfaz.
 export function parsearEstadoProlog(texto) {
     if (!texto || typeof texto !== 'string') return null;
 
@@ -85,6 +115,12 @@ export function parsearEstadoProlog(texto) {
     };
 }
 
+// Nombre: parsearConexionesProlog/1
+// Descripcion: convierte la salida de conexiones en una lista de origen y destino.
+// Entrada: texto con terminos `conexion(...)`.
+// Salida: arreglo de objetos con `origen` y `destino`.
+// Restricciones: descarta conexiones incompletas.
+// Objetivo: alimentar el mapa y las rutas de la UI.
 export function parsearConexionesProlog(texto) {
     if (!texto || typeof texto !== 'string') return [];
 
@@ -92,6 +128,12 @@ export function parsearConexionesProlog(texto) {
         .filter((conexion) => conexion.origen && conexion.destino);
 }
 
+// Nombre: parsearModulosInfo/1
+// Descripcion: convierte la salida de modulos en objetos con modulo y descripcion.
+// Entrada: texto con terminos `modulo_data(...)`.
+// Salida: arreglo de registros legibles.
+// Restricciones: ignora items sin nombre de modulo.
+// Objetivo: mostrar descripciones de cada modulo en la interfaz.
 export function parsearModulosInfo(texto) {
     if (!texto || typeof texto !== 'string') return [];
 
@@ -99,6 +141,12 @@ export function parsearModulosInfo(texto) {
         .filter((item) => item.modulo);
 }
 
+// Nombre: parsearRegistroProlog/1
+// Descripcion: convierte el registro de partidas en objetos accesibles desde React.
+// Entrada: texto con terminos `partida_registro(...)`.
+// Salida: arreglo de registros con jugador, id, archivo y estado.
+// Restricciones: descarta registros sin id valido.
+// Objetivo: poblar la lista de misiones guardadas.
 export function parsearRegistroProlog(texto) {
     if (!texto || typeof texto !== 'string') return [];
 
@@ -106,6 +154,12 @@ export function parsearRegistroProlog(texto) {
         .filter((registro) => registro.jugador && registro.idPartida !== null);
 }
 
+// Nombre: parsearPendientesProlog/1
+// Descripcion: convierte la salida de partidas pendientes en un arreglo utilizable.
+// Entrada: texto con terminos `partida(...)`.
+// Salida: arreglo de registros con id y archivo.
+// Restricciones: solo conserva entradas con id valido.
+// Objetivo: permitir continuar partidas desde la pantalla inicial.
 export function parsearPendientesProlog(texto) {
     if (!texto || typeof texto !== 'string') return [];
 

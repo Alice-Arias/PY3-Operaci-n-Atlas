@@ -1,8 +1,30 @@
+% Base de conocimiento estatica del juego Atlas.
+% Contiene modulos, enlaces, artefactos, requisitos, objetivos y estado inicial.
+% No define logica ejecutable; solo alimenta a los predicados del backend.
+
 % Archivo con los datos fijos del juego.
 % Descripcion: aqui van los nombres y datos que no cambian durante la partida.
 % Entrada: no recibe datos, solo se consulta al cargar el proyecto.
 % Salida: deja disponibles los hechos del mapa, objetos y objetivos.
 % Restricciones: estos hechos no deben modificarse al jugar.
+
+:- dynamic archivo_partida_por_defecto/1.
+:- dynamic archivo_registro_partidas/1.
+:- dynamic modulo/2.
+:- dynamic enlace/2.
+:- dynamic artefacto/2.
+:- dynamic sistema_inicial/4.
+:- dynamic tripulante_inicial/4.
+:- dynamic necesita/2.
+:- dynamic necesita_estado/3.
+:- dynamic paso_previo/2.
+:- dynamic objetivo_sistema/2.
+:- dynamic objetivo_tripulante/2.
+:- dynamic jugador_inicial/1.
+:- dynamic inventario_inicial/1.
+:- dynamic visitado_inicial/1.
+:- dynamic usado_inicial/1.
+:- dynamic tomado_inicial/1.
 
 % Archivo por defecto para guardar una partida si no hay nombre de jugador.
 % Entrada: ninguna.

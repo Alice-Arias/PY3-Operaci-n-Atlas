@@ -1,5 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 
+// Nombre: clasificarMensaje/1
+// Descripcion: asigna un tipo visual a un texto de bitacora.
+// Entrada: mensaje en texto plano.
+// Salida: categoria como error, movimiento, accion, info o sistema.
+// Restricciones: usa palabras clave simples.
+// Objetivo: colorear la bitacora segun el contenido.
 function clasificarMensaje(texto) {
     if (!texto) return 'sistema';
     const t = texto.toLowerCase();
@@ -10,10 +16,21 @@ function clasificarMensaje(texto) {
     return 'sistema';
 }
 
+// Nombre: embellecerTexto/1
+// Descripcion: limpia y hace mas legible el texto que llega desde Prolog.
+// Entrada: texto bruto.
+// Salida: texto mejor formateado para mostrar en pantalla.
+// Restricciones: no cambia la semantica, solo la presentacion.
+// Objetivo: hacer la bitacora mas comprensible para cualquier persona.
 function embellecerTexto(texto) {
     if (!texto || typeof texto !== 'string') return texto;
 
-    const limpio = texto.trim().replace(/^ERROR\s*[:-]?\s*/i, '').trim();
+    const limpio = texto
+        .trim()
+        .replace(/^ERROR\s*\([^)]*\):\s*/i, '')
+        .replace(/^\([^)]*\):\s*/i, '')
+        .replace(/^ERROR\s*[:-]?\s*/i, '')
+        .trim();
 
     if (/^Sistemas pendientes:\s*\[\s*\]$/i.test(limpio)) {
         return 'No quedan sistemas pendientes.';
@@ -39,6 +56,12 @@ function embellecerTexto(texto) {
         .trim();
 }
 
+// Nombre: getTagLabel/1
+// Descripcion: traduce una categoria interna a la etiqueta visible del panel.
+// Entrada: tipo de mensaje.
+// Salida: etiqueta en mayusculas.
+// Restricciones: usa un mapa fijo de categorias.
+// Objetivo: mantener consistente la nomenclatura de la bitacora.
 function getTagLabel(tipo) {
     const tags = {
         sistema:    'SISTEMA',
@@ -50,6 +73,12 @@ function getTagLabel(tipo) {
     return tags[tipo] || 'SISTEMA';
 }
 
+// Nombre: now/0
+// Descripcion: devuelve la hora actual en formato de bitacora.
+// Entrada: no recibe datos.
+// Salida: cadena con hora, minuto y segundo.
+// Restricciones: usa la hora local del sistema.
+// Objetivo: marcar el momento de cada evento en la consola.
 function now() {
     const d = new Date();
     const h = String(d.getHours()).padStart(2, '0');
@@ -58,29 +87,32 @@ function now() {
     return `[${h}:${m}:${s}]`;
 }
 
+// Nombre: TerminalConsole
+// Descripcion: muestra la bitacora en vivo, errores y acceso a ayuda.
+// Entrada: log, callbacks de ayuda y error, y bandera de deshabilitado.
+// Salida: un panel de consola visual con mensajes formateados.
+// Restricciones: depende de que el log llegue como texto plano.
+// Objetivo: ofrecer feedback continuo al jugador.
 function TerminalConsole({ log, onAyuda, disabled, errorActual, onDismissError }) {
     const bottomRef = useRef(null);
     const [lineas, setLineas] = useState([]);
 
 // Convierte texto plano en líneas estructuradas
     useEffect(() => {
-        if (!log) return;
+        if (!log) {
+            setLineas([]);
+            return;
+        }
+
         // Dividir por saltos de línea para manejar respuestas largas
-        const partes = log.split('\n').filter(l => l.trim() !== '');
-        const nuevas = partes.map(parte => ({
+        const partes = log.split('\n').filter((l) => l.trim() !== '');
+        const nuevas = partes.map((parte) => ({
             id: Date.now() + Math.random(),
             timestamp: now(),
             tipo: clasificarMensaje(parte),
             texto: embellecerTexto(parte),
         }));
-        setLineas(prev => {
-            // parta que no se dupliquen mensajes iniciales
-            if (prev.length === 0 && nuevas.length > 0) return nuevas;
-            // Agregar solo líneas que no sean idénticas al último batch
-            const ultimoTexto = prev[prev.length - 1]?.texto;
-            if (nuevas.length === 1 && nuevas[0].texto === ultimoTexto) return prev;
-            return [...prev, ...nuevas].slice(-120); // mantener últimas 120 líneas
-        });
+        setLineas(nuevas.slice(-120));
     }, [log]);
 
     // Auto-scroll

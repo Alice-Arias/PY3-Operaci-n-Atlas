@@ -33,6 +33,12 @@ const MODULE_KEYWORDS = [
 
 const MODULE_FALLBACK_EMOJIS = ['🛰️', '🧭', '🧪', '🧰', '⚙️', '🔷', '🛡️', '🗺️'];
 
+// Nombre: normalizarClave/1
+// Descripcion: elimina acentos y normaliza texto para comparaciones.
+// Entrada: valor textual.
+// Salida: string en minusculas sin diacriticos.
+// Restricciones: solo normaliza texto, no valida contenido.
+// Objetivo: comparar nombres de forma robusta en iconos y rutas.
 function normalizarClave(valor) {
     if (!valor) return '';
     return valor
@@ -43,6 +49,12 @@ function normalizarClave(valor) {
         .trim();
 }
 
+// Nombre: hashTexto/1
+// Descripcion: genera un hash sencillo para elegir iconos de respaldo.
+// Entrada: texto a hashear.
+// Salida: numero entero sin signo.
+// Restricciones: algoritmo simple, no criptografico.
+// Objetivo: elegir un emoji estable cuando no hay meta explicita.
 function hashTexto(texto) {
     let hash = 0;
     for (let i = 0; i < texto.length; i += 1) {
@@ -51,6 +63,12 @@ function hashTexto(texto) {
     return hash;
 }
 
+// Nombre: getModuloIcon/1
+// Descripcion: resuelve el icono visual de un modulo.
+// Entrada: nombre del modulo.
+// Salida: emoji representativo.
+// Restricciones: usa reglas fijas y una lista de respaldo.
+// Objetivo: dar una lectura visual rapida del mapa.
 function getModuloIcon(nombre) {
     const clave = normalizarClave(nombre);
     if (!clave) return '🔷';
@@ -63,6 +81,12 @@ function getModuloIcon(nombre) {
     return MODULE_FALLBACK_EMOJIS[hashTexto(clave) % MODULE_FALLBACK_EMOJIS.length];
 }
 
+// Nombre: getMeta/1
+// Descripcion: devuelve icono y etiqueta legible de un modulo.
+// Entrada: nombre del modulo.
+// Salida: objeto con icono y label.
+// Restricciones: combina datos base con fallback visual.
+// Objetivo: centralizar la informacion visual de cada nodo.
 function getMeta(nombre) {
     const base = MODULE_META[nombre] || {};
     return {
@@ -71,11 +95,23 @@ function getMeta(nombre) {
     };
 }
 
+// Nombre: formatNombre/1
+// Descripcion: convierte un identificador interno en texto legible.
+// Entrada: nombre con guiones bajos.
+// Salida: texto con espacios y capitalizacion inicial.
+// Restricciones: solo formatea cadenas simples.
+// Objetivo: mostrar nombres de modulos en la interfaz.
 function formatNombre(nombre) {
     if (!nombre) return 'Desconocido';
     return nombre.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
+// Nombre: construirGrafoBidireccional/1
+// Descripcion: transforma una lista de conexiones en un grafo no dirigido.
+// Entrada: arreglo de conexiones.
+// Salida: Map con vecindades bidireccionales.
+// Restricciones: asume que las conexiones vienen bien formadas.
+// Objetivo: reutilizar la estructura para busqueda y dibujo.
 function construirGrafoBidireccional(conexiones) {
     const grafo = new Map();
 
@@ -89,6 +125,12 @@ function construirGrafoBidireccional(conexiones) {
     return grafo;
 }
 
+// Nombre: buscarRutaMasCorta/3
+// Descripcion: encuentra el camino mas corto entre dos modulos.
+// Entrada: origen, destino y conexiones.
+// Salida: arreglo con la ruta o vacio si no existe.
+// Restricciones: usa busqueda en anchura sobre el grafo bidireccional.
+// Objetivo: sugerir desplazamientos rapidos al jugador.
 function buscarRutaMasCorta(origen, destino, conexiones) {
     if (!origen || !destino) return [];
     if (origen === destino) return [origen];
@@ -114,10 +156,22 @@ function buscarRutaMasCorta(origen, destino, conexiones) {
     return [];
 }
 
+// Nombre: construirConexionesDeRespaldo/2
+// Descripcion: crea conexiones derivadas cuando el backend no envia el grafo completo.
+// Entrada: modulo actual y lista de modulos conectados.
+// Salida: lista de conexiones con origen fijo.
+// Restricciones: se usa solo como respaldo visual.
+// Objetivo: permitir dibujar el mapa aun con datos parciales.
 function construirConexionesDeRespaldo(moduloActual, conectados) {
     return conectados.map((destino) => ({ origen: moduloActual, destino }));
 }
 
+// Nombre: crearSetAristasDesdeRuta/1
+// Descripcion: convierte una ruta en un conjunto de aristas destacables.
+// Entrada: arreglo de modulos.
+// Salida: Set con pares de aristas en ambos sentidos.
+// Restricciones: requiere al menos dos nodos para crear aristas.
+// Objetivo: resaltar la ruta sugerida en el grafo.
 function crearSetAristasDesdeRuta(ruta) {
     const setAristas = new Set();
     for (let i = 0; i < ruta.length - 1; i += 1) {
@@ -129,6 +183,12 @@ function crearSetAristasDesdeRuta(ruta) {
     return setAristas;
 }
 
+// Nombre: obtenerRutasAlternativas/4
+// Descripcion: busca varias rutas alternativas entre dos modulos.
+// Entrada: origen, destino, conexiones y limite de rutas.
+// Salida: arreglo de rutas ordenadas por longitud.
+// Restricciones: limita profundidad y cantidad para evitar explosiones combinatorias.
+// Objetivo: dar opciones visuales cuando hay mas de un camino posible.
 function obtenerRutasAlternativas(origen, destino, conexiones, limite = 3) {
     if (!origen || !destino || origen === destino) return [];
 
@@ -170,6 +230,12 @@ function obtenerRutasAlternativas(origen, destino, conexiones, limite = 3) {
         .slice(0, limite);
 }
 
+// Nombre: MapaVisual
+// Descripcion: renderiza el mapa de la estacion con nodos, rutas y estado visual.
+// Entrada: modulos, conexiones, estado y callbacks de ficha.
+// Salida: SVG y paneles laterales con la estructura del mapa.
+// Restricciones: necesita listas de modulos y conexiones para dibujarse bien.
+// Objetivo: mostrar de forma grafica el progreso del jugador por la estacion.
 function MapaVisual({
     modulos,
     conexiones,
@@ -189,6 +255,12 @@ function MapaVisual({
     const [moduloSeleccionado, setModuloSeleccionado] = useState('');
 
     //estado visual de cada módulo------------------------------------------------------------------------------------
+    // Nombre: calcularEstadoPorModulo/2
+    // Descripcion: clasifica cada modulo como operativo, fallado o en reparacion.
+    // Entrada: lista de modulos y lista de sistemas.
+    // Salida: mapa de estados visuales por modulo.
+    // Restricciones: asume que los sistemas llevan el campo `estado`.
+    // Objetivo: pintar el mapa con semaforo de estado por area.
     const statusModulo = useMemo(() => {
         const map = {};
         listaModulos.forEach((m) => {
@@ -201,6 +273,12 @@ function MapaVisual({
         return map;
     }, [listaModulos, sistemas]);
 
+    // Nombre: getStatusLabel/1
+    // Descripcion: traduce un estado tecnico a una etiqueta visible.
+    // Entrada: estado interno del modulo.
+    // Salida: texto de interfaz.
+    // Restricciones: solo distingue tres estados principales.
+    // Objetivo: mostrar una leyenda simple y entendible.
     const getStatusLabel = (status) => {
         if (status === 'fallo') return 'Sin Reparar';
         if (status === 'reparando') return 'En Reparación';
@@ -208,13 +286,31 @@ function MapaVisual({
     };
 
     // Artefactos en un módulo------------------------------------------------------------------------------------
+    // Nombre: artefactosEnModulo/1
+    // Descripcion: obtiene los artefactos ubicados en un modulo concreto.
+    // Entrada: nombre del modulo.
+    // Salida: arreglo de nombres de artefactos.
+    // Restricciones: filtra sobre la lista de artefactos disponibles.
+    // Objetivo: mostrar que recursos hay en cada nodo.
     const artefactosEnModulo = (modulo) =>
         artefactosDisponibles.filter(a => a.modulo === modulo).map(a => a.artefacto);
 
     // Tripulantes atrapados------------------------------------------------------------------------------------
+    // Nombre: tripulantesEnModulo/1
+    // Descripcion: obtiene la tripulacion atrapada en un modulo.
+    // Entrada: nombre del modulo.
+    // Salida: arreglo de tripulantes atrapados.
+    // Restricciones: solo considera estado `atrapado`.
+    // Objetivo: visualizar objetivos de rescate por zona.
     const tripulantesEnModulo = (modulo) =>
         tripulantes.filter(t => t.modulo === modulo && t.estado === 'atrapado');
 
+    // Nombre: tieneAccionPendiente/1
+    // Descripcion: determina si un modulo todavia requiere una accion.
+    // Entrada: nombre del modulo.
+    // Salida: verdadero si tiene fallos, reparaciones o tripulantes atrapados.
+    // Restricciones: usa el estado visual calculado arriba.
+    // Objetivo: resaltar modulos relevantes para el jugador.
     const tieneAccionPendiente = (modulo) => {
         const estado = statusModulo[modulo] || 'operativo';
         return estado === 'fallo' || estado === 'reparando' || tripulantesEnModulo(modulo).length > 0;
@@ -222,23 +318,47 @@ function MapaVisual({
 
     const cols = listaModulos.length <= 4 ? listaModulos.length : listaModulos.length <= 6 ? 3 : 4;
 
+    // Nombre: calcularConexionesParaGrafo/3
+    // Descripcion: decide que conjunto de conexiones usar para dibujar el mapa.
+    // Entrada: conexiones del backend, modulo actual y conexiones cercanas.
+    // Salida: lista de conexiones para el grafo visual.
+    // Restricciones: usa respaldo cuando el backend no aporta todas las rutas.
+    // Objetivo: evitar que el mapa quede vacio si faltan datos.
     const conexionesParaGrafo = useMemo(() => {
         if (listaConexiones.length > 0) return listaConexiones;
         if (!moduloActual || conectados.length === 0) return [];
         return construirConexionesDeRespaldo(moduloActual, conectados);
     }, [listaConexiones, moduloActual, conectados]);
 
+    // Nombre: calcularRutaSugerida/3
+    // Descripcion: calcula la ruta corta desde el modulo actual al seleccionado.
+    // Entrada: modulo actual, modulo seleccionado y conexiones.
+    // Salida: ruta sugerida para la interfaz.
+    // Restricciones: requiere que haya modulo seleccionado.
+    // Objetivo: guiar visualmente el movimiento del jugador.
     const rutaSugerida = useMemo(() => {
         if (!moduloSeleccionado || !moduloActual) return [];
         return buscarRutaMasCorta(moduloActual, moduloSeleccionado, conexionesParaGrafo);
     }, [moduloActual, moduloSeleccionado, conexionesParaGrafo]);
 
+    // Nombre: calcularRutasPosibles/3
+    // Descripcion: obtiene varias rutas alternativas hacia el modulo seleccionado.
+    // Entrada: modulo actual, modulo seleccionado y conexiones.
+    // Salida: arreglo con rutas alternativas.
+    // Restricciones: limita el numero de rutas para evitar saturar la interfaz.
+    // Objetivo: mostrar alternativas de desplazamiento.
     const rutasPosibles = useMemo(() => {
         if (!moduloSeleccionado || !moduloActual) return [];
         if (moduloSeleccionado === moduloActual) return [];
         return obtenerRutasAlternativas(moduloActual, moduloSeleccionado, conexionesParaGrafo, 3);
     }, [moduloActual, moduloSeleccionado, conexionesParaGrafo]);
 
+    // Nombre: resaltarRutaSugerida/1
+    // Descripcion: transforma la ruta sugerida en un conjunto de aristas resaltables.
+    // Entrada: ruta sugerida.
+    // Salida: Set con aristas de la ruta.
+    // Restricciones: depende de que la ruta sea una lista valida.
+    // Objetivo: pintar la ruta activa sobre el grafo.
     const aristasRuta = useMemo(() => crearSetAristasDesdeRuta(rutaSugerida), [rutaSugerida]);
 
     const destinoEsDirecto = moduloSeleccionado && conectados.includes(moduloSeleccionado);
@@ -248,6 +368,12 @@ function MapaVisual({
     const artefactosModuloSeleccionado = moduloSeleccionado ? artefactosEnModulo(moduloSeleccionado) : [];
     const tripulantesModuloSeleccionado = moduloSeleccionado ? tripulantesEnModulo(moduloSeleccionado) : [];
     const moduloSeleccionadoEsActual = moduloSeleccionado && moduloSeleccionado === moduloActual;
+    // Nombre: construirFichaModulo/1
+    // Descripcion: arma el panel de detalle del modulo actualmente seleccionado.
+    // Entrada: modulo seleccionado y datos derivados.
+    // Salida: objeto con descripcion, artefactos, tripulantes y rutas.
+    // Restricciones: devuelve null si no hay modulo seleccionado.
+    // Objetivo: alimentar el panel lateral de detalles.
     const fichaModuloSeleccionado = useMemo(() => {
         if (!moduloSeleccionado) return null;
 
@@ -262,11 +388,23 @@ function MapaVisual({
         };
     }, [moduloSeleccionado, moduloActual, moduloSeleccionadoEsActual, descripcionModuloSeleccionado, artefactosModuloSeleccionado, tripulantesModuloSeleccionado, rutasPosibles]);
 
+    // Nombre: propagarFichaModulo/1
+    // Descripcion: notifica al padre cuando cambia la ficha del modulo.
+    // Entrada: ficha calculada y callback externo.
+    // Salida: actualizacion del componente padre.
+    // Restricciones: solo actua si el callback es una funcion.
+    // Objetivo: sincronizar la seleccion del mapa con la pantalla principal.
     useEffect(() => {
         if (typeof onFichaModuloChange !== 'function') return;
         onFichaModuloChange(fichaModuloSeleccionado);
     }, [onFichaModuloChange, fichaModuloSeleccionado]);
 
+    // Nombre: fijarModuloInicial/0
+    // Descripcion: selecciona automaticamente el modulo actual al montar el mapa.
+    // Entrada: estado actual y modulo seleccionado.
+    // Salida: modulo seleccionado por defecto.
+    // Restricciones: no sobrescribe una seleccion ya existente.
+    // Objetivo: evitar que el panel lateral arranque vacio.
     useEffect(() => {
         if (!moduloActual) return;
         if (!moduloSeleccionado) {
@@ -274,6 +412,12 @@ function MapaVisual({
         }
     }, [moduloActual, moduloSeleccionado]);
 
+    // Nombre: calcularLayoutGrafo/2
+    // Descripcion: distribuye los nodos en un circulo y genera las lineas entre ellos.
+    // Entrada: lista de modulos y conexiones para el grafo.
+    // Salida: posiciones y lineas listas para renderizar.
+    // Restricciones: requiere al menos un modulo para construir el layout.
+    // Objetivo: dibujar el mapa de forma clara y estable.
     const layoutGrafo = useMemo(() => {
         const total = listaModulos.length;
         if (total === 0) return { posiciones: [], lineas: [] };

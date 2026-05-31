@@ -1,10 +1,22 @@
 import React from 'react';
 
+// Nombre: formatNombre/1
+// Descripcion: convierte un identificador interno en texto legible.
+// Entrada: nombre con guiones bajos.
+// Salida: texto con espacios y capitalizacion inicial.
+// Restricciones: solo formatea cadenas simples.
+// Objetivo: mostrar nombres de modulos y acciones en la interfaz.
 function formatNombre(nombre) {
     if (!nombre) return '';
     return nombre.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
+// Nombre: ControlPanel
+// Descripcion: presenta los botones de movimiento, toma, reparacion y rescate.
+// Entrada: estado de juego, callback de accion y bandera de deshabilitado.
+// Salida: un panel React con acciones disponibles.
+// Restricciones: depende del estado actual para saber que botones mostrar.
+// Objetivo: ofrecer al jugador un acceso rapido a las acciones principales.
 function ControlPanel({ estado, onAccion, disabled }) {
     const moduloActual        = estado?.moduloActual || 'desconocido';
     const conectados          = Array.isArray(estado?.modulosConectados) ? estado.modulosConectados : [];

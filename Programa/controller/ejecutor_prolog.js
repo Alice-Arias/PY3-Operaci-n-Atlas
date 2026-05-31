@@ -23,6 +23,12 @@ const ROOT_DIR = path.join(__dirname, "..");
 // -----------------------------------------------------------------------------
 // CONVERSION DE RUTAS
 // -----------------------------------------------------------------------------
+// Nombre: convertirRuta/1
+// Descripcion: adapta una ruta de Windows o Unix al formato que Prolog acepta.
+// Entrada: ruta del sistema operativo actual.
+// Salida: cadena con separadores compatibles con Prolog.
+// Restricciones: solo normaliza barras; no valida la existencia del archivo.
+// Objetivo: evitar fallos al cargar modulos desde distintas plataformas.
 function convertirRuta(ruta) {
     if (os.platform() === 'win32') {
         // En Windows: reemplazar \ por / (Prolog acepta slash en Windows tambien)
@@ -33,6 +39,12 @@ function convertirRuta(ruta) {
 // -----------------------------------------------------------------------------
 // ARMAR META COMPLETA
 // -----------------------------------------------------------------------------
+// Nombre: armarMetaCompleta/1
+// Descripcion: construye la consulta base que arranca Prolog con todos los modulos.
+// Entrada: una meta opcional para ejecutar tras cargar el sistema.
+// Salida: cadena lista para pasar a `swipl -g`.
+// Restricciones: asume que el entorno necesita `main.pl`, persistencia y traductor.
+// Objetivo: estandarizar el arranque de todas las consultas Prolog.
 function armarMetaCompleta(meta) {
     const mainRuta        = convertirRuta(MAIN);
     const persistenciaRuta = convertirRuta(PERSISTENCIA);
@@ -58,6 +70,12 @@ function armarMetaCompleta(meta) {
 // -----------------------------------------------------------------------------
 // EJECUTAR COMANDO SWIPL
 // -----------------------------------------------------------------------------
+// Nombre: ejecutarComando/1
+// Descripcion: ejecuta una meta de Prolog en un proceso SWI-Prolog.
+// Entrada: meta completa ya preparada para el argumento `-g`.
+// Salida: objeto con `ok` y `out` o con `ok=false` y `err`.
+// Restricciones: depende de que `swipl` este disponible en el sistema.
+// Objetivo: concentrar la ejecucion real de Prolog en un unico punto.
 function ejecutarComando(metaCompleta) {
     // Usa una lista de argumentos en lugar de string para que no haya problemas de caracteres
     const comando = `${SWIPL} -q -g "${metaCompleta}"`;
@@ -92,17 +110,35 @@ function ejecutarComando(metaCompleta) {
 // -----------------------------------------------------------------------------
 // API
 // -----------------------------------------------------------------------------
+// Nombre: correrProlog/1
+// Descripcion: prepara y ejecuta una consulta Prolog de alto nivel.
+// Entrada: meta logica compacta sin el arranque comun.
+// Salida: resultado de `ejecutarComando/1`.
+// Restricciones: la meta debe ser una cadena valida para Prolog.
+// Objetivo: exponer una funcion simple para el resto del backend.
 function correrProlog(meta) {
     const metaCompleta = armarMetaCompleta(meta);
     return ejecutarComando(metaCompleta);
 }
 
+// Nombre: esListaProlog/1
+// Descripcion: comprueba si una cadena tiene forma de lista Prolog.
+// Entrada: texto a revisar.
+// Salida: verdadero si comienza con `[` y termina con `]`.
+// Restricciones: no analiza contenido interno.
+// Objetivo: decidir si conviene parsear una salida como lista.
 function esListaProlog(cadena) {
     if (!cadena) return false;
     const textoLista = cadena.trim();
     return textoLista.startsWith("[") && textoLista.endsWith("]");
 }
 
+// Nombre: limpiarElemento/1
+// Descripcion: elimina comillas externas de un elemento textual de Prolog.
+// Entrada: texto a limpiar.
+// Salida: cadena sin comillas externas.
+// Restricciones: solo quita una capa de comillas simples o dobles.
+// Objetivo: convertir salidas crudas de Prolog en texto legible.
 function limpiarElemento(texto) {
     if (!texto || typeof texto !== 'string') return texto;
     const t = texto.trim();
@@ -113,6 +149,12 @@ function limpiarElemento(texto) {
     return t;
 }
 
+// Nombre: separarElementos/1
+// Descripcion: divide una lista Prolog sin romper sublistas o terminos anidados.
+// Entrada: texto que contiene los elementos internos de una lista.
+// Salida: array de elementos separados por comas de nivel superior.
+// Restricciones: asume parentesis y corchetes balanceados.
+// Objetivo: permitir parsear estructuras complejas sin usar un parser completo.
 function separarElementos(textoLista) {
     const elementos = [];
     let acumulado = '';
@@ -134,6 +176,12 @@ function separarElementos(textoLista) {
     return elementos;
 }
 
+// Nombre: leerLista/1
+// Descripcion: convierte una lista Prolog textual en un arreglo de JavaScript.
+// Entrada: cadena con la lista en sintaxis Prolog.
+// Salida: arreglo o null si la entrada no tiene formato de lista.
+// Restricciones: solo entiende listas de texto, no terminos ejecutables.
+// Objetivo: reutilizar una lectura simple de listas en todo el backend.
 function leerLista(cadena) {
     if (!esListaProlog(cadena)) return null;
 

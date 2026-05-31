@@ -3,6 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { apiService } from '../services/api';
 import './StartCard.css';
 
+// Nombre: StartCard
+// Descripcion: permite iniciar una partida nueva o continuar una guardada.
+// Entrada: no recibe props.
+// Salida: formulario inicial con nombre y selector de misiones.
+// Restricciones: requiere conexión con el backend para consultar partidas.
+// Objetivo: ser la puerta de entrada a la experiencia de juego.
 function StartCard() {
     const [nombre, setNombre] = useState('');
     const [loading, setLoading] = useState(false);

@@ -1,15 +1,33 @@
 const { correrProlog, leerLista } = require('./ejecutor_prolog');
 
+// Nombre: enviarBien/2
+// Descripcion: envia una respuesta JSON exitosa al cliente.
+// Entrada: respuesta HTTP y datos a serializar.
+// Salida: respuesta con status 200 implícito y cuerpo JSON.
+// Restricciones: requiere una instancia valida de respuesta Express.
+// Objetivo: estandarizar las respuestas exitosas del API.
 function enviarBien(respuestaHttp, datos) {
     respuestaHttp.json(datos);
 }
 
+// Nombre: enviarError/2
+// Descripcion: envia un error HTTP limpio y homogéneo.
+// Entrada: respuesta HTTP y mensaje de error.
+// Salida: respuesta 500 con un campo `error`.
+// Restricciones: depende de `limpiarMensajeErrorProlog/1`.
+// Objetivo: ocultar ruido tecnico y devolver mensajes entendibles.
 function enviarError(respuestaHttp, mensajeError) {
     const mensajeLimpio = limpiarMensajeErrorProlog(mensajeError);
 
     respuestaHttp.status(500).json({ error: mensajeLimpio });
 }
 
+// Nombre: formatearError/1
+// Descripcion: normaliza un texto de error para presentarlo al usuario.
+// Entrada: mensaje de error bruto.
+// Salida: texto con prefijo `ERROR -` y contenido limpio.
+// Restricciones: elimina prefijos repetidos de error antes de formatear.
+// Objetivo: mantener un estilo unico en los mensajes fallidos.
 function formatearError(mensaje) {
     const limpio = (mensaje || '').toString().trim().replace(/^ERROR\s*[:-]?\s*/i, '').trim();
     if (!limpio) {
@@ -18,6 +36,12 @@ function formatearError(mensaje) {
     return `ERROR - ${limpio}`;
 }
 
+// Nombre: limpiarMensajeErrorProlog/1
+// Descripcion: elimina ruido tecnico de los errores producidos por Prolog.
+// Entrada: texto de error bruto.
+// Salida: mensaje resumido y mas legible para el jugador.
+// Restricciones: filtra warnings, rutas y mensajes repetitivos.
+// Objetivo: traducir errores del motor a lenguaje de usuario.
 function limpiarMensajeErrorProlog(mensajeError) {
     const textoBase = (mensajeError || '').toString().trim();
     if (!textoBase) {
@@ -69,6 +93,12 @@ function limpiarMensajeErrorProlog(mensajeError) {
     return formatearError(textoFiltrado);
 }
 
+// Nombre: convertirSalida/1
+// Descripcion: intenta leer la salida de Prolog como lista; si falla, la deja cruda.
+// Entrada: texto de salida.
+// Salida: arreglo, texto original o el valor recibido si no se puede parsear.
+// Restricciones: depende de `leerLista/1` y atrapa errores de parseo.
+// Objetivo: ofrecer una conversion segura para respuestas mixtas.
 function convertirSalida(textoSalida) {
     try {
         return leerLista(textoSalida) || textoSalida;
@@ -77,12 +107,24 @@ function convertirSalida(textoSalida) {
     }
 }
 
+// Nombre: obtenerEstadoJuego/0
+// Descripcion: consulta el estado UI actual desde Prolog.
+// Entrada: no recibe datos.
+// Salida: texto serializado del estado actual o null si falla.
+// Restricciones: requiere que el motor Prolog responda correctamente.
+// Objetivo: sincronizar el frontend con el estado real de la partida.
 function obtenerEstadoJuego() {
     const salida = correrProlog("estado_ui(E), format('~q', [E])");
     if (!salida.ok) return null;
     return salida.out;
 }
 
+// Nombre: ejecutarAccion/2
+// Descripcion: ejecuta una meta Prolog que modifica el estado y devuelve el resultado actualizado.
+// Entrada: meta Prolog y respuesta HTTP.
+// Salida: JSON con la salida de la accion y el estado actual.
+// Restricciones: usa `obtenerEstadoJuego/0` solo cuando la accion fue exitosa.
+// Objetivo: unificar la ejecucion de comandos de juego mutables.
 function ejecutarAccion(meta, respuestaHttp) {
     const salida = correrProlog(meta);
 
@@ -97,6 +139,12 @@ function ejecutarAccion(meta, respuestaHttp) {
     });
 }
 
+// Nombre: ejecutarConsultaLista/2
+// Descripcion: ejecuta una consulta Prolog y empaqueta su salida como lista.
+// Entrada: meta Prolog y respuesta HTTP.
+// Salida: JSON con `raw` y `list`.
+// Restricciones: el formato crudo debe ser interpretable como lista por `leerLista/1`.
+// Objetivo: simplificar las respuestas de consultas de lectura.
 function ejecutarConsultaLista(meta, respuestaHttp) {
     const salida = correrProlog(meta);
 
@@ -110,6 +158,12 @@ function ejecutarConsultaLista(meta, respuestaHttp) {
     });
 }
 
+// Nombre: ejecutarAyuda/1
+// Descripcion: solicita a Prolog la ayuda actualizada para la partida.
+// Entrada: respuesta HTTP.
+// Salida: JSON con la ayuda o con un error amable.
+// Restricciones: la respuesta de Prolog puede venir como exito o error.
+// Objetivo: exponer la guia del juego al frontend.
 function ejecutarAyuda(respuestaHttp) {
     const salida = correrProlog('ayuda_ui');
 
@@ -123,6 +177,12 @@ function ejecutarAyuda(respuestaHttp) {
     });
 }
 
+// Nombre: ejecutarForzarGane/1
+// Descripcion: pregunta a Prolog si la partida todavia tiene solucion.
+// Entrada: respuesta HTTP.
+// Salida: mensaje de estado sobre la viabilidad de la partida.
+// Restricciones: depende del predicado `forzar_gane_ui` del motor.
+// Objetivo: informar si la partida aun puede completarse.
 function ejecutarForzarGane(respuestaHttp) {
     const salida = correrProlog('forzar_gane_ui');
 
@@ -136,6 +196,12 @@ function ejecutarForzarGane(respuestaHttp) {
     });
 }
 
+// Nombre: ejecutarForzarGanePlan/1
+// Descripcion: pide a Prolog un plan estructurado para terminar la partida.
+// Entrada: respuesta HTTP.
+// Salida: JSON con una lista de pasos o una lista vacia si algo falla.
+// Restricciones: espera que la salida de Prolog sea JSON valido.
+// Objetivo: entregar un plan mecanico para que el frontend lo ejecute o muestre.
 function ejecutarForzarGanePlan(respuestaHttp) {
     const salida = correrProlog('forzar_gane_plan_ui');
 
@@ -153,11 +219,23 @@ function ejecutarForzarGanePlan(respuestaHttp) {
     }
 }
 
+// Nombre: escaparAtomPrologLocal/1
+// Descripcion: escapa comillas simples para construir atoms seguros en Prolog.
+// Entrada: texto libre.
+// Salida: atom entre comillas simples con comillas duplicadas internamente.
+// Restricciones: solo protege comillas simples; no hace sanitizacion completa.
+// Objetivo: evitar romper consultas al interpolar texto del usuario.
 function escaparAtomPrologLocal(texto) {
     if (texto === null || texto === undefined) return "''";
     return "'" + String(texto).replace(/'/g, "''") + "'";
 }
 
+// Nombre: ejecutarPlan/1
+// Descripcion: ejecuta un plan de ayuda paso a paso y devuelve el detalle de resultados.
+// Entrada: respuesta HTTP.
+// Salida: JSON con plan, resultados y estado final.
+// Restricciones: depende del plan producido por `forzar_gane_plan_ui`.
+// Objetivo: automatizar la ejecucion de la guia de victoria.
 async function ejecutarPlan(respuestaHttp) {
     const salida = correrProlog('forzar_gane_plan_ui');
 
@@ -334,6 +412,19 @@ async function ejecutarPlan(respuestaHttp) {
             continue;
         }
 
+        // Pasar por X para desbloquear acceso a Y
+        m = texto.match(/^Pasar por\s+(.+?)\s+para desbloquear acceso a\s+(.+)$/i);
+        if (m) {
+            const modulo = m[1].trim();
+            const metaMover = `mover_ui(${escaparAtomPrologLocal(modulo)})`;
+            const outMover = correrProlog(metaMover);
+            resultados.push({ paso: texto, accion: 'mover', destino: modulo, ok: outMover.ok, out: outMover.ok ? outMover.out : outMover.err });
+            if (outMover.ok) {
+                posicionActual = modulo;
+            }
+            continue;
+        }
+
         // Pasar por X para desbloquear
         m = texto.match(/^Pasar por\s+(.+?)\s+para desbloquear acceso a\s+(.+)$/i);
         if (m) {
@@ -362,6 +453,12 @@ async function ejecutarPlan(respuestaHttp) {
     return enviarBien(respuestaHttp, { plan, results: resultados, finalEstado: estadoFinal });
 }
 
+// Nombre: ejecutarPlanStream/1
+// Descripcion: ejecuta el plan de victoria mediante eventos SSE en tiempo real.
+// Entrada: respuesta HTTP.
+// Salida: stream de eventos `plan`, `step`, `log`, `error` y `end`.
+// Restricciones: la conexion debe permanecer abierta durante la ejecucion.
+// Objetivo: permitir que el frontend vea el avance en vivo.
 function ejecutarPlanStream(respuestaHttp) {
     // configurar SSE
     respuestaHttp.writeHead(200, {
@@ -527,6 +624,20 @@ function ejecutarPlanStream(respuestaHttp) {
                 const metaRescatar = `rescatar_ui(${escaparAtomPrologLocal(trip)})`;
                 const outRescatar = correrProlog(metaRescatar);
                 sseSend({ type: 'step', paso: texto, accion: 'rescatar', tripulante: trip, ok: outRescatar.ok, out: outRescatar.ok ? outRescatar.out : limpiarMensajeErrorProlog(outRescatar.err) });
+                await new Promise(r => setTimeout(r, 120));
+                continue;
+            }
+
+            // Pasar por X para desbloquear acceso a Y
+            m = texto.match(/^Pasar por\s+(.+?)\s+para desbloquear acceso a\s+(.+)$/i);
+            if (m) {
+                const modulo = m[1].trim();
+                const metaMover = `mover_ui(${escaparAtomPrologLocal(modulo)})`;
+                const outMover = correrProlog(metaMover);
+                sseSend({ type: 'step', paso: texto, accion: 'mover', destino: modulo, ok: outMover.ok, out: outMover.ok ? outMover.out : limpiarMensajeErrorProlog(outMover.err) });
+                if (outMover.ok) {
+                    posicionActual = modulo;
+                }
                 await new Promise(r => setTimeout(r, 120));
                 continue;
             }
