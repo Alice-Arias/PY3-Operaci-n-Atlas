@@ -19,9 +19,9 @@ Sistema desarrollado en **Prolog** con una capa de **Node.js + Express** y un fr
 
 | Nombre |
 |---|
-| Alice Arias Salazar |
-| Heldys Aguero Espinosa |
-| Yeremi Calvo Porras |
+| Alice Arias Salazar  2023104639 |
+| Heldyis Agüero Espinoza  2023296812|
+| Yeremi Calvo Porras  2023083332|
 
 ---
 
